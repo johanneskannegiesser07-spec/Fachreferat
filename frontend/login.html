@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 KI-Lern-Buddy - Login</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+        }
+        .login-container {
+            background: white; padding: 40px; border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2); width: 100%; max-width: 400px;
+        }
+        h1 { text-align: center; margin-bottom: 30px; color: #333; }
+        .form-group { margin-bottom: 20px; }
+        input { 
+            width: 100%; padding: 15px; border: 2px solid #e1e5e9; 
+            border-radius: 8px; font-size: 16px; margin-bottom: 10px;
+        }
+        button { 
+            width: 100%; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;
+            font-weight: 600; margin-bottom: 15px;
+        }
+        button:hover { transform: translateY(-2px); }
+        .switch-mode { text-align: center; color: #666; }
+        .switch-mode a { color: #667eea; text-decoration: none; cursor: pointer; }
+        .error { color: #dc3545; text-align: center; margin-top: 10px; padding: 10px; background: #f8d7da; border-radius: 5px; }
+        .success { color: #28a745; text-align: center; margin-top: 10px; padding: 10px; background: #d4edda; border-radius: 5px; }
+        .loading { color: #667eea; text-align: center; }
+        .debug { background: #f8f9fa; padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1>🤖 KI-Lern-Buddy</h1>
+        
+        <div id="loginForm">
+            <div class="form-group">
+                <input type="text" id="loginUsername" placeholder="Benutzername" value="test_user">
+                <input type="password" id="loginPassword" placeholder="Passwort" value="test123">
+                <button onclick="login()">Anmelden</button>
+            </div>
+            <div class="switch-mode">
+                Noch keinen Account? <a onclick="showRegister()">Registrieren</a>
+            </div>
+        </div>
+
+        <div id="registerForm" style="display: none;">
+            <div class="form-group">
+                <input type="text" id="regUsername" placeholder="Benutzername">
+                <input type="email" id="regEmail" placeholder="E-Mail">
+                <input type="password" id="regPassword" placeholder="Passwort">
+                <input type="password" id="regPasswordConfirm" placeholder="Passwort bestätigen">
+                <button onclick="register()">Registrieren</button>
+            </div>
+            <div class="switch-mode">
+                Bereits Account? <a onclick="showLogin()">Anmelden</a>
+            </div>
+        </div>
+
+        <div id="message"></div>
+        <div id="debug" class="debug" style="display: none;"></div>
+        
+        <div style="text-align: center; margin-top: 20px;">
+            <button onclick="toggleDebug()" style="background: #6c757d; padding: 5px 10px; font-size: 12px;">Debug Info</button>
+            <button onclick="clearStorage()" style="background: #dc3545; padding: 5px 10px; font-size: 12px;">Clear Storage</button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let debugEnabled = false;
+
+        // Prüfe ob bereits eingeloggt
+        checkAuthStatus();
+
+        function showLogin() {
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('registerForm').style.display = 'none';
+            document.getElementById('message').innerHTML = '';
+        }
+
+        function showRegister() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'block';
+            document.getElementById('message').innerHTML = '';
+        }
+
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+
+        function debugLog(message) {
+            if (!debugEnabled) return;
+            const debugDiv = document.getElementById('debug');
+            debugDiv.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${message}</div>`;
+            debugDiv.scrollTop = debugDiv.scrollHeight;
+        }
+
+        function toggleDebug() {
+            debugEnabled = !debugEnabled;
+            document.getElementById('debug').style.display = debugEnabled ? 'block' : 'none';
+            debugLog('Debug mode ' + (debugEnabled ? 'enabled' : 'disabled'));
+        }
+
+        function clearStorage() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            debugLog('LocalStorage cleared');
+            showMessage('✅ LocalStorage geleert', 'success');
+        }
+
+        async function checkAuthStatus() {
+            debugLog('Prüfe Auth Status...');
+            const token = localStorage.getItem('token');
+            
+            if (!token) {
+                debugLog('Kein Token gefunden - bleibe auf Login');
+                return;
+            }
+
+            debugLog('Token gefunden, prüfe Gültigkeit...');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/check-auth`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    debugLog('Token gültig - redirect zu Hauptseite');
+                    // Kurze Verzögerung damit Debug-Nachrichten sichtbar sind
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 500);
+                } else {
+                    debugLog('Token ungültig - entferne aus Storage');
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                }
+            } catch (error) {
+                debugLog('Fehler bei Auth-Check: ' + error.message);
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+            }
+        }
+
+        async function login() {
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+
+            if (!username || !password) {
+                showMessage('❌ Bitte Benutzername und Passwort eingeben', 'error');
+                return;
+            }
+
+            try {
+                showMessage('🔄 Anmeldung läuft...', 'loading');
+                debugLog(`Login versuch für: ${username}`);
+
+                const response = await fetch(`${API_BASE}/api/login`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const result = await response.json();
+                debugLog(`Login Response: ${response.status} - ${JSON.stringify(result)}`);
+
+                if (result.success) {
+                    // Token speichern
+                    localStorage.setItem('token', result.access_token);
+                    localStorage.setItem('user', JSON.stringify(result.user));
+                    
+                    debugLog('Token gespeichert, redirect...');
+                    showMessage('✅ Erfolgreich angemeldet! Leite weiter...', 'success');
+                    
+                    // Verzögerung für visuelles Feedback
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1000);
+                } else {
+                    showMessage('❌ ' + (result.detail || 'Anmeldung fehlgeschlagen'), 'error');
+                    debugLog('Login fehlgeschlagen');
+                }
+            } catch (error) {
+                showMessage('❌ Netzwerkfehler: ' + error.message, 'error');
+                debugLog('Netzwerkfehler: ' + error.message);
+            }
+        }
+
+        async function register() {
+            const username = document.getElementById('regUsername').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            const passwordConfirm = document.getElementById('regPasswordConfirm').value;
+
+            if (!username || !email || !password) {
+                showMessage('❌ Bitte alle Felder ausfüllen', 'error');
+                return;
+            }
+
+            if (password !== passwordConfirm) {
+                showMessage('❌ Passwörter stimmen nicht überein', 'error');
+                return;
+            }
+
+            try {
+                showMessage('🔄 Registrierung läuft...', 'loading');
+                debugLog(`Registrierung für: ${username}`);
+
+                const response = await fetch(`${API_BASE}/api/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password, role: 'student' })
+                });
+
+                const result = await response.json();
+                debugLog(`Register Response: ${response.status} - ${JSON.stringify(result)}`);
+
+                if (result.success) {
+                    showMessage('✅ Registration erfolgreich! Bitte anmelden.', 'success');
+                    // Auto-fill login form
+                    document.getElementById('loginUsername').value = username;
+                    document.getElementById('loginPassword').value = password;
+                    showLogin();
+                } else {
+                    showMessage('❌ ' + (result.detail || 'Registration fehlgeschlagen'), 'error');
+                }
+            } catch (error) {
+                showMessage('❌ Netzwerkfehler: ' + error.message, 'error');
+                debugLog('Registrierungsfehler: ' + error.message);
+            }
+        }
+
+        // Enter-Taste für Login/Registrierung
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                if (document.getElementById('loginForm').style.display !== 'none') {
+                    login();
+                } else {
+                    register();
+                }
+            }
+        });
+
+        // Debug info beim Laden
+        debugLog('Page loaded - Token in localStorage: ' + (localStorage.getItem('token') ? 'YES' : 'NO'));
+        
+        // Initialisiere Login-Form
+        showLogin();
+    </script>
+</body>
+</html>

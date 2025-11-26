@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Test-Modus - KI-Lern-Buddy</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh; padding: 20px;
+        }
+        .container { max-width: 1000px; margin: 0 auto; }
+        header { 
+            text-align: center; margin-bottom: 30px; color: white; 
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        header h1 { font-size: 2.5rem; margin-bottom: 10px; }
+        .user-info { 
+            background: rgba(255,255,255,0.2); padding: 10px 20px; 
+            border-radius: 10px; display: flex; align-items: center; gap: 10px;
+        }
+        .card { 
+            background: white; border-radius: 15px; padding: 25px; 
+            margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .card h2 { 
+            color: #333; margin-bottom: 20px; font-size: 1.5rem; 
+            border-bottom: 2px solid #667eea; padding-bottom: 10px;
+        }
+        .form-group { 
+            display: flex; flex-wrap: wrap; gap: 10px; align-items: end; 
+            margin-bottom: 15px;
+        }
+        input, select { 
+            padding: 12px 15px; border: 2px solid #e1e5e9; border-radius: 8px; 
+            font-size: 16px; flex: 1; min-width: 150px; 
+        }
+        button { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white; border: none; padding: 12px 25px; border-radius: 8px; 
+            font-size: 16px; cursor: pointer; font-weight: 600; 
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        button:disabled { background: #6c757d; cursor: not-allowed; transform: none; }
+        button.secondary { background: #6c757d; }
+        button.success { background: #28a745; }
+        button.danger { background: #dc3545; }
+        button.logout { background: #dc3545; padding: 8px 15px; font-size: 14px; }
+        
+        /* Test-Spezifische Styles */
+        .test-header {
+            display: flex; justify-content: space-between; align-items: center;
+            background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px;
+        }
+        .timer {
+            font-size: 1.5rem; font-weight: bold; color: #dc3545;
+            background: white; padding: 10px 20px; border-radius: 8px;
+            border: 2px solid #dc3545;
+        }
+        .progress-bar {
+            width: 100%; height: 10px; background: #e9ecef; border-radius: 5px;
+            margin: 20px 0; overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%; background: linear-gradient(90deg, #28a745, #20c997);
+            transition: width 0.3s ease;
+        }
+        .question-container {
+            background: #f8f9fa; padding: 25px; border-radius: 10px;
+            margin-bottom: 20px; border-left: 4px solid #667eea;
+        }
+        .question-number {
+            font-size: 0.9rem; color: #6c757d; margin-bottom: 10px;
+        }
+        .question-text {
+            font-size: 1.2rem; line-height: 1.6; margin-bottom: 20px;
+            color: #333;
+        }
+        .navigation-buttons {
+            display: flex; justify-content: space-between; margin-top: 20px;
+        }
+        .feedback-container {
+            background: #e7f3ff; padding: 20px; border-radius: 10px;
+            margin-top: 20px; border-left: 4px solid #007bff;
+        }
+        .correct { color: #28a745; font-weight: bold; }
+        .incorrect { color: #dc3545; font-weight: bold; }
+        
+        .hidden { display: none !important; }
+        .output { 
+            background: #f8f9fa; border-radius: 10px; padding: 20px; 
+            margin-top: 15px; border-left: 4px solid #667eea; 
+            max-height: 500px; overflow-y: auto; 
+        }
+        .debug { background: #f8f9fa; padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 12px; color: #666; display: none; }
+       
+        /* Multiple Choice Styles */
+        .mc-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .mc-option {
+            padding: 12px 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            margin: 0;
+        }
+
+        .mc-option:hover {
+            border-color: #667eea;
+            background-color: #f8f9fa;
+            transform: translateY(-1px);
+        }
+
+        .mc-option.selected {
+            border-color: #667eea;
+            background-color: #e7f3ff;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+        }
+
+        .mc-option input[type="checkbox"] {
+            margin-right: 12px;
+            transform: scale(1.1);
+            cursor: pointer;
+        }
+
+        .mc-option label {
+            cursor: pointer;
+            font-size: 16px;
+            margin: 0;
+            flex: 1;
+            line-height: 1.4;
+            display: flex;
+            align-items: center;
+        }
+
+        /* ERGEBNISSE - GARANTIERT SICHTBARE STYLES */
+        #testResult {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            position: relative !important;
+            z-index: 1000 !important;
+        }
+
+        #testResult.hidden {
+            display: none !important;
+        }
+
+        .result-content {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .score-circle {
+            width: 120px; height: 120px; border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; display: flex; align-items: center; justify-content: center;
+            font-size: 2rem; font-weight: bold; margin: 0 auto 20px;
+        }
+
+        .performance-badge {
+            display: inline-block; padding: 8px 16px; border-radius: 20px;
+            color: white; font-weight: bold; margin: 10px 0;
+        }
+
+        .performance-badge.excellent { background: #28a745; }
+        .performance-badge.good { background: #20c997; }
+        .performance-badge.average { background: #ffc107; color: #333; }
+        .performance-badge.poor { background: #dc3545; }
+
+        /* GARANTIERT SICHTBARE ERGEBNIS-CONTAINER */
+        .results-container {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            margin: 20px 0;
+            padding: 0;
+            min-height: 50px;
+            height: auto;
+        }
+
+        .question-result {
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .question-result.correct {
+            border-left: 6px solid #28a745;
+        }
+
+        .question-result.incorrect {
+            border-left: 6px solid #dc3545;
+        }
+
+        .question-result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f8f9fa;
+        }
+
+        .answer-comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 15px 0;
+        }
+
+        .answer-section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .answer-item {
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 6px;
+            border: 1px solid transparent;
+        }
+
+        .answer-correct {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+
+        .answer-incorrect {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+
+        .answer-missing {
+            background: #fff3cd;
+            border-color: #ffeaa7;
+            color: #856404;
+        }
+
+        .explanation-box {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .feedback-container {
+            background: white;
+            border: 1px solid #e1e5e9;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+
+        .recommendation-item {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 12px 15px;
+            margin: 10px 0;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1>🧪 KI-Lern-Buddy - Test-Modus</h1>
+                <p>Teste dein Wissen mit personalisierten Fragen</p>
+            </div>
+            <div class="user-info">
+                <span id="usernameDisplay">Lade...</span>
+                <button class="logout" onclick="goToDashboard()">📊 Dashboard</button>
+                <button onclick="toggleDebug()" style="background: #6c757d; padding: 5px 10px; font-size: 12px;">Debug</button>
+            </div>
+        </header>
+
+        <div id="debug" class="debug"></div>
+
+        <!-- Test-Konfiguration -->
+        <div id="testSetup" class="card">
+            <h2>🎯 Test konfigurieren</h2>
+            <div class="form-group">
+                <input type="text" id="testSubject" placeholder="Fach" value="Mathe">
+                <input type="text" id="testTopic" placeholder="Thema" value="Analysis">
+                <select id="questionCount">
+                    <option value="5">5 Fragen</option>
+                    <option value="10" selected>10 Fragen</option>
+                    <option value="15">15 Fragen</option>
+                    <option value="20">20 Fragen</option>
+                </select>
+                <button onclick="startTest()" id="startTestBtn">🚀 Test starten</button>
+            </div>
+        </div>
+
+        <!-- Aktiver Test -->
+        <div id="activeTest" class="card hidden">
+            <div class="test-header">
+                <div>
+                    <strong id="testInfo">Fach: Lade...</strong>
+                    <div id="progressText">Frage 1 von 10</div>
+                </div>
+                <div class="timer" id="timer">60:00</div>
+            </div>
+
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+            </div>
+
+            <div class="question-container">
+                <div class="question-number" id="questionNumber">Frage #1</div>
+                <div class="question-text" id="questionText">Lade Frage...</div>
+                
+                <!-- Multiple Choice Options -->
+                <div class="mc-options" id="mcOptions" style="margin: 20px 0;">
+                    <div class="mc-option" id="optionAContainer">
+                        <input type="checkbox" id="optionA" value="A">
+                        <label for="optionA"><span id="labelA">A) Lade Option A...</span></label>
+                    </div>
+                    <div class="mc-option" id="optionBContainer">
+                        <input type="checkbox" id="optionB" value="B">
+                        <label for="optionB"><span id="labelB">B) Lade Option B...</span></label>
+                    </div>
+                    <div class="mc-option" id="optionCContainer">
+                        <input type="checkbox" id="optionC" value="C">
+                        <label for="optionC"><span id="labelC">C) Lade Option C...</span></label>
+                    </div>
+                    <div class="mc-option" id="optionDContainer">
+                        <input type="checkbox" id="optionD" value="D">
+                        <label for="optionD"><span id="labelD">D) Lade Option D...</span></label>
+                    </div>
+                    <div class="mc-option hidden" id="optionEContainer">
+                        <input type="checkbox" id="optionE" value="E">
+                        <label for="optionE"><span id="labelE">E) Lade Option E...</span></label>
+                    </div>
+                    <div class="mc-option hidden" id="optionFContainer">
+                        <input type="checkbox" id="optionF" value="F">
+                        <label for="optionF"><span id="labelF">F) Lade Option F...</span></label>
+                    </div>
+                </div>
+
+                <div class="feedback-container hidden" id="feedbackContainer">
+                    <h4>📝 Feedback:</h4>
+                    <div id="feedbackContent">Lade Feedback...</div>
+                </div>
+
+                <div class="navigation-buttons">
+                    <button onclick="previousQuestion()" id="prevBtn" class="secondary">⬅️ Vorherige</button>
+                    <button onclick="nextQuestion()" id="nextBtn" class="secondary">Nächste ➡️</button>
+                    <button onclick="finishTest()" id="finishBtn" class="success">🏁 Test beenden</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Testergebnis - NEUE STRUKTUR -->
+        <div id="testResult" class="card hidden">
+            <div class="result-content">
+                <h2>📊 Testergebnis</h2>
+                
+                <!-- DEBUG BUTTONS -->
+                <div style="text-align: center; margin: 10px 0;">
+                    <button onclick="debugElements()" style="background: #17a2b8; padding: 5px 10px; font-size: 12px; margin: 5px;">
+                        🔍 Debug Elements
+                    </button>
+                    <button onclick="forceRender()" style="background: #6f42c1; padding: 5px 10px; font-size: 12px; margin: 5px;">
+                        🔄 Force Render
+                    </button>
+                </div>
+                
+                <div class="score-circle" id="scoreCircle">0%</div>
+                <div id="performanceBadge" class="performance-badge">Lade...</div>
+                
+                <div style="margin: 20px 0; font-size: 1.1em;">
+                    <p><strong>Richtige Antworten:</strong> <span id="correctAnswers">0</span>/<span id="totalQuestions">0</span></p>
+                    <p><strong>Zeit:</strong> <span id="timeSpent">0</span> Sekunden</p>
+                    <p><strong>Thema:</strong> <span id="resultTopic">Lade...</span></p>
+                </div>
+
+                <!-- GARANTIERT SICHTBARE CONTAINER -->
+                <div id="detailedResults" class="results-container">
+                    <h3 style="text-align: center; margin: 30px 0 20px 0; color: #333;">📋 Detaillierte Antwort-Analyse</h3>
+                    <div id="questionsContainer">
+                        <!-- Hier werden die Fragen dynamisch eingefügt -->
+                    </div>
+                </div>
+
+                <div id="feedbackResults" class="results-container">
+                    <h3 style="text-align: center; margin: 30px 0 20px 0; color: #333;">🧠 Umfassende KI-Analyse</h3>
+                    <div id="feedbackContainer">
+                        <!-- Hier wird das Feedback dynamisch eingefügt -->
+                    </div>
+                </div>
+
+                <div style="margin-top: 30px;">
+                    <button onclick="newTest()" class="success" style="margin: 5px;">🔄 Neuer Test</button>
+                    <button onclick="goToDashboard()" class="secondary" style="margin: 5px;">📊 Zum Dashboard</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Debug Output -->
+        <div class="card">
+            <h2>🔍 Test-Status</h2>
+            <div id="output" class="output">
+                Konfiguriere deinen Test und starte ihn!
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let currentUsername = '';
+        let debugEnabled = true;
+        let currentTest = null;
+        let testTimer = null;
+        let timeRemaining = 0;
+        let currentQuestionIndex = 0;
+        let userAnswers = {};
+        let selectedOptions = new Set();
+
+        // Beim Laden Auth prüfen
+        document.addEventListener('DOMContentLoaded', function() {
+            debugLog('DOM vollständig geladen');
+            checkAuthentication();
+            
+            setTimeout(() => {
+                initializeCheckboxEvents();
+            }, 100);
+        });
+
+        function debugLog(message) {
+            if (!debugEnabled) return;
+            const debugDiv = document.getElementById('debug');
+            const timestamp = new Date().toLocaleTimeString();
+            debugDiv.innerHTML += `<div><strong>${timestamp}:</strong> ${message}</div>`;
+            debugDiv.scrollTop = debugDiv.scrollHeight;
+            console.log(`[DEBUG] ${message}`);
+        }
+
+        function toggleDebug() {
+            debugEnabled = !debugEnabled;
+            document.getElementById('debug').style.display = debugEnabled ? 'block' : 'none';
+            debugLog('Debug mode ' + (debugEnabled ? 'enabled' : 'disabled'));
+        }
+
+        async function checkAuthentication() {
+            debugLog('Starte Authentifizierungsprüfung...');
+            const token = localStorage.getItem('token');
+            
+            if (!token) {
+                debugLog('Kein Token gefunden - redirect zu Login');
+                window.location.href = '/login';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/check-auth`, {
+                    headers: {'Authorization': `Bearer ${token}`}
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    currentUsername = result.user.sub;
+                    document.getElementById('usernameDisplay').textContent = currentUsername;
+                    debugLog('Erfolgreich authentifiziert als: ' + currentUsername);
+                } else {
+                    throw new Error('Token ungültig');
+                }
+            } catch (error) {
+                debugLog('Fehler bei Auth-Check: ' + error.message);
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+            }
+        }
+
+        function showOutput(message, className = '') {
+            const output = document.getElementById('output');
+            output.innerHTML = `<div class="${className}">${message}</div>`;
+            debugLog(`Output: ${message}`);
+        }
+
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            const token = localStorage.getItem('token');
+            
+            if (!token) {
+                window.location.href = '/login';
+                return;
+            }
+
+            try {
+                debugLog(`API Call: ${method} ${endpoint}`);
+                
+                const options = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                };
+                
+                if (data && method !== 'GET') {
+                    options.body = JSON.stringify(data);
+                }
+                
+                const response = await fetch(`${API_BASE}${endpoint}`, options);
+                debugLog(`API Response Status: ${response.status}`);
+                
+                if (response.status === 401) {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    window.location.href = '/login';
+                    return;
+                }
+                
+                const result = await response.json();
+                debugLog(`API Response Data: ${JSON.stringify(result)}`);
+                
+                if (!response.ok) {
+                    throw new Error(result.detail || 'Unbekannter Fehler');
+                }
+                
+                return result;
+            } catch (error) {
+                showOutput(`❌ Fehler: ${error.message}`, 'error');
+                debugLog('API Fehler: ' + error.message);
+                throw error;
+            }
+        }
+
+        // Test-Funktionen
+        async function startTest() {
+            const subject = document.getElementById('testSubject').value;
+            const topic = document.getElementById('testTopic').value;
+            const questionCount = parseInt(document.getElementById('questionCount').value);
+
+            if (!subject || !topic) {
+                showOutput('❌ Bitte Fach und Thema eingeben', 'error');
+                return;
+            }
+
+            try {
+                showOutput('🚀 Starte Test...', 'loading');
+                document.getElementById('startTestBtn').disabled = true;
+
+                const result = await apiCall('/api/start-test', 'POST', {
+                    subject: subject,
+                    topic: topic,
+                    question_count: questionCount
+                });
+
+                if (result.success) {
+                    currentTest = result.data;
+                    debugLog('Test erfolgreich gestartet');
+                    
+                    // KORREKTE Zeitinitialisierung - 60 Sekunden pro Frage
+                    timeRemaining = questionCount * 60;
+                    debugLog(`⏰ Zeitlimit gesetzt: ${timeRemaining} Sekunden (${questionCount} Fragen × 60s)`);
+                    
+                    document.getElementById('testSetup').classList.add('hidden');
+                    document.getElementById('activeTest').classList.remove('hidden');
+                    
+                    startTimer();
+                    
+                    currentQuestionIndex = 0;
+                    userAnswers = {}; // Antworten zurücksetzen
+                    selectedOptions = new Set(); // Auswahl zurücksetzen
+                    
+                    loadQuestion(0);
+                    
+                    showOutput(`✅ Test gestartet: ${subject} - ${topic} (${questionCount} Fragen, ${timeRemaining}s Zeit)`);
+                } else {
+                    showOutput('❌ Test konnte nicht gestartet werden', 'error');
+                    document.getElementById('startTestBtn').disabled = false;
+                }
+            } catch (error) {
+                document.getElementById('startTestBtn').disabled = false;
+                debugLog('Fehler beim Test-Start: ' + error.message);
+                showOutput('❌ Fehler beim Test-Start: ' + error.message, 'error');
+            }
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeRemaining / 60);
+            const seconds = timeRemaining % 60;
+            
+            const timerElement = document.getElementById('timer');
+            if (timerElement) {
+                timerElement.textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                // Farbänderung bei wenig Zeit
+                if (timeRemaining < 60) {
+                    timerElement.style.color = '#dc3545';
+                    timerElement.style.borderColor = '#dc3545';
+                } else if (timeRemaining < 300) {
+                    timerElement.style.color = '#ffc107';
+                    timerElement.style.borderColor = '#ffc107';
+                } else {
+                    timerElement.style.color = '#28a745';
+                    timerElement.style.borderColor = '#28a745';
+                }
+            }
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeRemaining / 60);
+            const seconds = timeRemaining % 60;
+            document.getElementById('timer').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            if (timeRemaining < 60) {
+                document.getElementById('timer').style.color = '#dc3545';
+                document.getElementById('timer').style.borderColor = '#dc3545';
+            } else if (timeRemaining < 300) {
+                document.getElementById('timer').style.color = '#ffc107';
+                document.getElementById('timer').style.borderColor = '#ffc107';
+            }
+        }
+
+        function loadQuestion(index) {
+            debugLog(`Lade Frage ${index}...`);
+            
+            if (!currentTest || !currentTest.exercises) {
+                debugLog('❌ currentTest oder exercises ist null!');
+                return;
+            }
+
+            let questions = null;
+            
+            if (Array.isArray(currentTest.exercises)) {
+                questions = currentTest.exercises;
+            } else if (currentTest.exercises.exercises && Array.isArray(currentTest.exercises.exercises)) {
+                questions = currentTest.exercises.exercises;
+            } else if (currentTest.exercises.questions && Array.isArray(currentTest.exercises.questions)) {
+                questions = currentTest.exercises.questions;
+            } else {
+                for (const key in currentTest.exercises) {
+                    if (Array.isArray(currentTest.exercises[key])) {
+                        questions = currentTest.exercises[key];
+                        break;
+                    }
+                }
+            }
+
+            if (!questions || index >= questions.length) {
+                debugLog('❌ Keine Fragen gefunden oder Index außerhalb');
+                return;
+            }
+
+            const question = questions[index];
+            if (!question) {
+                debugLog(`❌ Frage ${index} ist null/undefined`);
+                return;
+            }
+
+            // Frage anzeigen
+            document.getElementById('questionNumber').textContent = `Frage #${index + 1}`;
+            document.getElementById('questionText').textContent = question.question || 'Frage nicht verfügbar';
+            
+            // OPTIONEN ANZEIGEN
+            const options = question.options || {};
+
+            const labelA = document.getElementById('labelA');
+            const labelB = document.getElementById('labelB');
+            const labelC = document.getElementById('labelC');
+            const labelD = document.getElementById('labelD');
+            
+            if (labelA) labelA.textContent = `A) ${options.A || 'Option A nicht verfügbar'}`;
+            if (labelB) labelB.textContent = `B) ${options.B || 'Option B nicht verfügbar'}`;
+            if (labelC) labelC.textContent = `C) ${options.C || 'Option C nicht verfügbar'}`;
+            if (labelD) labelD.textContent = `D) ${options.D || 'Option D nicht verfügbar'}`;
+            
+            const optionEContainer = document.getElementById('optionEContainer');
+            const optionFContainer = document.getElementById('optionFContainer');
+            const labelE = document.getElementById('labelE');
+            const labelF = document.getElementById('labelF');
+            
+            if (optionEContainer && labelE) {
+                if (options.E) {
+                    optionEContainer.classList.remove('hidden');
+                    labelE.textContent = `E) ${options.E}`;
+                } else {
+                    optionEContainer.classList.add('hidden');
+                }
+            }
+            
+            if (optionFContainer && labelF) {
+                if (options.F) {
+                    optionFContainer.classList.remove('hidden');
+                    labelF.textContent = `F) ${options.F}`;
+                } else {
+                    optionFContainer.classList.add('hidden');
+                }
+            }
+            
+            // Fortschritt aktualisieren
+            const totalQuestions = currentTest.total_questions || questions.length;
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            const testInfo = document.getElementById('testInfo');
+            
+            if (progressFill) {
+                const progress = ((index + 1) / totalQuestions) * 100;
+                progressFill.style.width = `${progress}%`;
+            }
+            
+            if (progressText) {
+                progressText.textContent = `Frage ${index + 1} von ${totalQuestions}`;
+            }
+            
+            if (testInfo) {
+                testInfo.textContent = `Fach: ${currentTest.subject} - Thema: ${currentTest.topic}`;
+            }
+            
+            // Gespeicherte Antworten laden
+            selectedOptions = new Set(userAnswers[index] || []);
+            resetOptionSelection();
+            
+            selectedOptions.forEach(option => {
+                const checkbox = document.getElementById(`option${option}`);
+                if (checkbox) {
+                    checkbox.checked = true;
+                    const optionElement = document.getElementById(`option${option}Container`);
+                    if (optionElement) {
+                        optionElement.classList.add('selected');
+                    }
+                }
+            });
+            
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            
+            if (prevBtn) prevBtn.disabled = index === 0;
+            if (nextBtn) nextBtn.disabled = index === questions.length - 1;
+            
+            currentQuestionIndex = index;
+            
+            debugLog(`✅ Frage ${index + 1} erfolgreich geladen`);
+        }
+
+        function resetOptionSelection() {
+            document.querySelectorAll('.mc-option').forEach(el => {
+                el.classList.remove('selected');
+            });
+            
+            document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+        }
+
+        function previousQuestion() {
+            saveCurrentAnswerToDB();
+            if (currentQuestionIndex > 0) {
+                loadQuestion(currentQuestionIndex - 1);
+            }
+        }
+
+        function nextQuestion() {
+            saveCurrentAnswerToDB();
+            let totalQuestions = currentTest.total_questions;
+            if (!totalQuestions) {
+                if (Array.isArray(currentTest.exercises)) {
+                    totalQuestions = currentTest.exercises.length;
+                } else if (currentTest.exercises && currentTest.exercises.exercises) {
+                    totalQuestions = currentTest.exercises.exercises.length;
+                }
+            }
+            
+            if (currentQuestionIndex < totalQuestions - 1) {
+                loadQuestion(currentQuestionIndex + 1);
+            }
+        }
+
+        async function finishTest() {
+            // SPEICHERE die aktuelle Antwort bevor Test beendet wird
+            await saveCurrentAnswerToDB();
+
+            if (testTimer) {
+                clearInterval(testTimer);
+            }
+
+            try {
+                showOutput('🏁 Beende Test und wertet aus...', 'loading');
+                
+                if (!currentTest || !currentTest.test_id) {
+                    showOutput('❌ Keine gültige Test-Session gefunden', 'error');
+                    return;
+                }
+
+                const result = await apiCall('/api/finish-test', 'POST', {
+                    test_id: currentTest.test_id
+                });
+
+                if (result.success) {
+                    displayTestResult(result.data);
+                    showOutput('✅ Test erfolgreich abgeschlossen!', 'success');
+                } else {
+                    showOutput('❌ Test konnte nicht abgeschlossen werden', 'error');
+                }
+            } catch (error) {
+                debugLog('Fehler beim Test-Abschluss: ' + error.message);
+                showOutput('❌ Fehler beim Test-Abschluss: ' + error.message, 'error');
+            }
+        }
+
+        // NEUE DISPLAY-FUNKTION MIT GARANTIERTER ANZEIGE
+        function displayTestResult(result) {
+            console.log('=== START displayTestResult ===');
+            
+            // Debug das Feedback
+            if (result.comprehensive_feedback) {
+                debugFeedback(result.comprehensive_feedback);
+            }
+            
+            // Rest der Funktion unverändert...
+            // Verstecke aktiven Test
+            const activeTest = document.getElementById('activeTest');
+            if (activeTest) activeTest.classList.add('hidden');
+            
+            // Zeige Ergebnisse an
+            const testResult = document.getElementById('testResult');
+            if (testResult) {
+                testResult.classList.remove('hidden');
+                testResult.style.display = 'block';
+            }
+            
+            // Setze grundlegende Ergebnisse
+            document.getElementById('scoreCircle').textContent = `${Math.round(result.score || 0)}%`;
+            document.getElementById('correctAnswers').textContent = result.correct_answers || 0;
+            document.getElementById('totalQuestions').textContent = result.total_questions || 0;
+            document.getElementById('timeSpent').textContent = result.time_spent_seconds || 0;
+            document.getElementById('resultTopic').textContent = `${result.subject || 'Unbekannt'} - ${result.topic || 'Unbekannt'}`;
+            
+            // Performance-Badge
+            const badge = document.getElementById('performanceBadge');
+            const performanceLevel = result.performance_level || getPerformanceLevel(result.score || 0);
+            badge.textContent = performanceLevel;
+            badge.className = 'performance-badge ' + getPerformanceClass(result.score || 0);
+            
+            // RENDER ERGEBNISSE
+            renderDetailedResults(result.detailed_answers || []);
+            renderFeedbackResults(result.comprehensive_feedback || {});
+            
+            // Scroll zum Ergebnis
+            setTimeout(() => {
+                if (testResult) {
+                    testResult.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 500);
+            
+            console.log('✅ Ergebnisse angezeigt');
+        }
+
+        // NEUE RENDERING-FUNKTIONEN
+        function renderDetailedResults(detailedAnswers) {
+            const container = document.getElementById('questionsContainer');
+            
+            if (!detailedAnswers || detailedAnswers.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666;">Keine Antworten zur Analyse vorhanden.</p>';
+                return;
+            }
+            
+            let html = '';
+            
+            detailedAnswers.forEach((item, index) => {
+                const userAnswers = Array.isArray(item.user_answers) ? item.user_answers : [];
+                const correctAnswers = Array.isArray(item.correct_answers) ? item.correct_answers : [];
+                const isCorrect = item.is_correct === true;
+                const question = item.question || `Frage ${index + 1}`;
+                const explanation = item.explanation || 'Keine Erklärung verfügbar';
+                const options = item.options || {};
+                
+                html += `
+                    <div class="question-result ${isCorrect ? 'correct' : 'incorrect'}">
+                        <div class="question-result-header">
+                            <h4 style="margin: 0; color: #333;">Frage ${index + 1}</h4>
+                            <span style="color: ${isCorrect ? '#28a745' : '#dc3545'}; font-weight: bold; font-size: 1.1em;">
+                                ${isCorrect ? '✅ Richtig' : '❌ Falsch'}
+                            </span>
+                        </div>
+                        
+                        <p style="margin: 15px 0; font-weight: 500;">${question}</p>
+                        
+                        <div class="answer-comparison">
+                            <div class="answer-section">
+                                <h5 style="margin: 0 0 10px 0; color: #333;">Deine Antworten</h5>
+                                ${userAnswers.length > 0 ? 
+                                    userAnswers.map(a => {
+                                        const isCorrectAnswer = correctAnswers.includes(a);
+                                        const optionText = options[a] || `Option ${a}`;
+                                        return `
+                                            <div class="answer-item ${isCorrectAnswer ? 'answer-correct' : 'answer-incorrect'}">
+                                                <strong>${a}:</strong> ${optionText}
+                                                ${isCorrectAnswer ? ' ✅' : ' ❌'}
+                                            </div>
+                                        `;
+                                    }).join('') 
+                                    : '<div class="answer-item answer-incorrect">❌ Nicht beantwortet</div>'
+                                }
+                            </div>
+                            
+                            <div class="answer-section">
+                                <h5 style="margin: 0 0 10px 0; color: #333;">Richtige Antworten</h5>
+                                ${correctAnswers.map(a => {
+                                    const wasSelected = userAnswers.includes(a);
+                                    const optionText = options[a] || `Option ${a}`;
+                                    return `
+                                        <div class="answer-item ${wasSelected ? 'answer-correct' : 'answer-missing'}">
+                                            <strong>${a}:</strong> ${optionText}
+                                            ${wasSelected ? ' ✅ (gewählt)' : ' ⚠️ (fehlt)'}
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                        
+                        <div class="explanation-box">
+                            <strong>💡 Erklärung:</strong><br>
+                            ${explanation}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+            console.log('✅ Detailed Results gerendert');
+        }
+
+        function renderFeedbackResults(feedback) {
+            const container = document.getElementById('feedbackContainer');
+            
+            if (!feedback || Object.keys(feedback).length === 0) {
+                container.innerHTML = `
+                    <div class="feedback-container">
+                        <h4 style="color: #333; margin-bottom: 15px;">🧠 Umfassende KI-Analyse</h4>
+                        <p style="text-align: center; color: #666; padding: 20px;">
+                            Keine KI-Empfehlungen verfügbar.<br>
+                            <small>Dies kann passieren wenn zu wenig Daten für eine Analyse vorhanden sind.</small>
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+            
+            console.log('🔍 Rendering Feedback:', feedback);
+            
+            let html = `
+                <div class="feedback-container">
+                    <h4 style="color: #333; margin-bottom: 15px;">🧠 Umfassende KI-Analyse</h4>
+                    
+                    <!-- Gesamtbewertung -->
+                    <div style="background: #e7f3ff; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <h5 style="color: #007bff; margin: 0 0 10px 0;">📊 Gesamtbewertung</h5>
+                        <p style="margin: 0; font-size: 1.1em;">${feedback.overall_assessment || 'Keine Bewertung verfügbar'}</p>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0;">
+            `;
+            
+            // Stärken
+            html += `
+                <div>
+                    <h5 style="color: #28a745; margin-bottom: 10px;">✅ Deine Stärken</h5>
+                    <ul style="padding-left: 20px; margin: 0;">
+            `;
+            (feedback.key_strengths || ['Noch nicht analysiert']).forEach(strength => {
+                html += `<li style="margin-bottom: 8px;">${strength}</li>`;
+            });
+            html += `</ul></div>`;
+            
+            // Verbesserungsbereiche
+            html += `
+                <div>
+                    <h5 style="color: #dc3545; margin-bottom: 10px;">🎯 Verbesserungsbereiche</h5>
+                    <ul style="padding-left: 20px; margin: 0;">
+            `;
+            (feedback.main_weaknesses || ['Alles im grünen Bereich']).forEach(weakness => {
+                html += `<li style="margin-bottom: 8px;">${weakness}</li>`;
+            });
+            html += `</ul></div>`;
+            
+            html += `</div>`;
+            
+            // Lernempfehlungen
+            if (feedback.learning_recommendations && feedback.learning_recommendations.length > 0) {
+                html += `
+                    <h5 style="color: #333; margin: 25px 0 15px 0;">📚 Lernempfehlungen</h5>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                `;
+                
+                feedback.learning_recommendations.forEach((rec, index) => {
+                    const priorityColor = getPriorityColor(rec.priority);
+                    html += `
+                        <div class="recommendation-item" style="border-left: 4px solid ${priorityColor};">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                                <strong style="color: #333; font-size: 1.1em;">${rec.area || 'Allgemein'}</strong>
+                                <span style="background: ${priorityColor}; color: white; padding: 3px 10px; border-radius: 12px; font-size: 0.8em; font-weight: bold;">
+                                    ${(rec.priority || 'mittel').toUpperCase()}
+                                </span>
+                            </div>
+                            <p style="margin: 8px 0 5px 0; color: #333;">${rec.action || ''}</p>
+                            <small style="color: #666; display: block; margin-top: 5px;">
+                                <em>${rec.reason || ''}</em>
+                            </small>
+                        </div>
+                    `;
+                });
+                
+                html += `</div>`;
+            }
+            
+            // Konzeptionelles Verständnis
+            if (feedback.conceptual_understanding) {
+                html += `
+                    <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 15px; margin: 20px 0;">
+                        <h5 style="color: #856404; margin: 0 0 10px 0;">💡 Konzeptionelles Verständnis</h5>
+                        <p style="margin: 0; color: #856404;">${feedback.conceptual_understanding}</p>
+                    </div>
+                `;
+            }
+            
+            // Nächste Schritte
+            if (feedback.next_steps && feedback.next_steps.length > 0) {
+                html += `
+                    <div style="margin: 25px 0 15px 0;">
+                        <h5 style="color: #333; margin-bottom: 10px;">🚀 Nächste Schritte</h5>
+                        <ul style="padding-left: 20px; margin: 0;">
+                `;
+                feedback.next_steps.forEach(step => {
+                    html += `<li style="margin-bottom: 8px; color: #333;">${step}</li>`;
+                });
+                html += `</ul></div>`;
+            }
+            
+            // Motivation
+            html += `
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin-top: 25px;">
+                    <h5 style="color: white; margin: 0 0 10px 0; font-size: 1.2em;">💪 Motivation</h5>
+                    <p style="margin: 0; font-size: 1.1em; line-height: 1.5;">${feedback.encouragement || 'Du machst das großartig! Weiter so!'}</p>
+                </div>
+            `;
+            
+            html += `</div>`;
+            
+            container.innerHTML = html;
+            console.log('✅ Feedback Results erfolgreich gerendert');
+        }
+
+        function getPriorityColor(priority) {
+            switch(priority) {
+                case 'hoch': return '#dc3545';
+                case 'mittel': return '#ffc107';
+                case 'niedrig': return '#28a745';
+                default: return '#6c757d';
+            }
+        }
+        function getPriorityColor(priority) {
+            switch(priority) {
+                case 'hoch': return '#dc3545';
+                case 'mittel': return '#ffc107';
+                case 'niedrig': return '#28a745';
+                default: return '#6c757d';
+            }
+        }
+
+        function getPerformanceClass(score) {
+            if (score >= 90) return 'excellent';
+            if (score >= 75) return 'good';
+            if (score >= 60) return 'average';
+            return 'poor';
+        }
+
+        function getPerformanceLevel(score) {
+            if (score >= 90) return "Exzellent";
+            if (score >= 75) return "Sehr gut";
+            if (score >= 60) return "Gut";
+            if (score >= 50) return "Befriedigend";
+            return "Braucht Übung";
+        }
+
+        // DEBUG-FUNKTIONEN
+        function debugElements() {
+            console.log('🔍 Debug HTML Elements:');
+            const elements = ['testResult', 'detailedResults', 'feedbackResults', 'questionsContainer', 'feedbackContainer'];
+            
+            elements.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    const style = window.getComputedStyle(el);
+                    console.log(`${id}:`, {
+                        display: style.display,
+                        visibility: style.visibility,
+                        opacity: style.opacity,
+                        height: el.offsetHeight,
+                        children: el.children.length,
+                        hidden: el.classList.contains('hidden')
+                    });
+                }
+            });
+        }
+
+        function forceRender() {
+            console.log('🔄 Force Render');
+            const testResult = document.getElementById('testResult');
+            if (testResult) {
+                testResult.style.display = 'none';
+                setTimeout(() => {
+                    testResult.style.display = 'block';
+                }, 50);
+            }
+        }
+
+        function cancelTest() {
+            if (confirm('Möchtest du den Test wirklich abbrechen? Deine bisherigen Antworten gehen verloren.')) {
+                if (testTimer) clearInterval(testTimer);
+                resetTest();
+                showOutput('❌ Test abgebrochen', 'error');
+            }
+        }
+
+        function resetTest() {
+            currentTest = null;
+            currentQuestionIndex = 0;
+            userAnswers = {};
+            selectedOptions = new Set();
+            timeRemaining = 0;
+            
+            document.getElementById('testSetup').classList.remove('hidden');
+            document.getElementById('activeTest').classList.add('hidden');
+            document.getElementById('testResult').classList.add('hidden');
+            document.getElementById('startTestBtn').disabled = false;
+        }
+
+        function newTest() {
+            resetTest();
+            showOutput('🔄 Neuer Test kann konfiguriert werden');
+        }
+
+        function goToDashboard() {
+            window.location.href = '/';
+        }
+
+        function initializeCheckboxEvents() {
+            document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                checkbox.addEventListener('change', function(e) {
+                    const option = this.value;
+                    const isChecked = this.checked;
+                    
+                    if (isChecked) selectedOptions.add(option);
+                    else selectedOptions.delete(option);
+                    
+                    const container = document.getElementById(`option${option}Container`);
+                    if (container) container.classList.toggle('selected', isChecked);
+                });
+            });
+            
+            document.querySelectorAll('.mc-option').forEach(container => {
+                container.addEventListener('click', function(e) {
+                    if (e.target.type === 'checkbox') return;
+                    const checkbox = this.querySelector('input[type="checkbox"]');
+                    if (checkbox) {
+                        checkbox.checked = !checkbox.checked;
+                        const changeEvent = new Event('change', { bubbles: true });
+                        checkbox.dispatchEvent(changeEvent);
+                    }
+                });
+            });
+        }
+
+        async function saveCurrentAnswerToDB() {
+            if (!currentTest || !currentTest.test_id) {
+                debugLog('❌ Kein aktiver Test zum Speichern');
+                return;
+            }
+            
+            // Auch leere Antworten speichern (für Fortschrittsanzeige)
+            const answersArray = Array.from(selectedOptions);
+            userAnswers[currentQuestionIndex] = answersArray;
+            
+            debugLog(`💾 Speichere Antwort für Frage ${currentQuestionIndex}: [${answersArray.join(', ')}]`);
+            
+            try {
+                const result = await apiCall('/api/save-answer', 'POST', {
+                    test_id: currentTest.test_id,
+                    question_index: currentQuestionIndex,
+                    user_answers: answersArray
+                });
+                
+                if (result.success) {
+                    debugLog(`✅ Antwort gespeichert: [${answersArray.join(', ')}]`);
+                } else {
+                    debugLog('❌ Antwort konnte nicht gespeichert werden');
+                }
+            } catch (error) {
+                debugLog('❌ API Fehler beim Speichern: ' + error.message);
+                // Fallback: Lokal speichern für spätere Übertragung
+                localStorage.setItem(`temp_answer_${currentTest.test_id}_${currentQuestionIndex}`, 
+                                    JSON.stringify(answersArray));
+            }
+        }
+        debugLog('Test-Modus vollständig geladen und initialisiert');
+
+        function debugFeedback(feedback) {
+            console.group('🔍 KI-Feedback Debug');
+            console.log('Feedback Object:', feedback);
+            console.log('Keys:', Object.keys(feedback));
+            console.log('Overall Assessment:', feedback.overall_assessment);
+            console.log('Key Strengths:', feedback.key_strengths);
+            console.log('Main Weaknesses:', feedback.main_weaknesses);
+            console.log('Learning Recommendations:', feedback.learning_recommendations);
+            console.log('Encouragement:', feedback.encouragement);
+            console.groupEnd();
+        }
+
+        function debugKIFeedback(result) {
+            console.group('🔍 KI-Feedback Debug');
+            console.log('Vollständiges Ergebnis:', result);
+            
+            if (result.comprehensive_feedback) {
+                console.log('✅ KI-Feedback vorhanden:', result.comprehensive_feedback);
+                console.log('Feedback Keys:', Object.keys(result.comprehensive_feedback));
+                console.log('Overall Assessment:', result.comprehensive_feedback.overall_assessment);
+                console.log('Key Strengths:', result.comprehensive_feedback.key_strengths);
+                console.log('Main Weaknesses:', result.comprehensive_feedback.main_weaknesses);
+                console.log('Learning Recommendations:', result.comprehensive_feedback.learning_recommendations);
+                console.log('Encouragement:', result.comprehensive_feedback.encouragement);
+            } else {
+                console.log('❌ KEIN KI-Feedback im Ergebnis!');
+            }
+            
+            console.log('Debug Info:', result.debug_info);
+            console.groupEnd();
+        }
+
+        // Und rufe sie in displayTestResult auf:
+        function displayTestResult(result) {
+            console.log('=== START displayTestResult ===');
+            
+            // Debug das KI-Feedback
+            debugKIFeedback(result);
+            
+            // Rest der Funktion unverändert...
+            const activeTest = document.getElementById('activeTest');
+            if (activeTest) activeTest.classList.add('hidden');
+            
+            const testResult = document.getElementById('testResult');
+            if (testResult) {
+                testResult.classList.remove('hidden');
+                testResult.style.display = 'block';
+            }
+            
+            // Grundlegende Ergebnisse setzen
+            document.getElementById('scoreCircle').textContent = `${Math.round(result.score || 0)}%`;
+            document.getElementById('correctAnswers').textContent = result.correct_answers || 0;
+            document.getElementById('totalQuestions').textContent = result.total_questions || 0;
+            document.getElementById('timeSpent').textContent = result.time_spent_seconds || 0;
+            document.getElementById('resultTopic').textContent = `${result.subject || 'Unbekannt'} - ${result.topic || 'Unbekannt'}`;
+            
+            // Performance-Badge
+            const badge = document.getElementById('performanceBadge');
+            const performanceLevel = result.performance_level || getPerformanceLevel(result.score || 0);
+            badge.textContent = performanceLevel;
+            badge.className = 'performance-badge ' + getPerformanceClass(result.score || 0);
+            
+            // RENDER ERGEBNISSE
+            renderDetailedResults(result.detailed_answers || []);
+            renderFeedbackResults(result.comprehensive_feedback || {});
+            
+            // Scroll zum Ergebnis
+            setTimeout(() => {
+                if (testResult) {
+                    testResult.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 500);
+            
+            console.log('✅ Ergebnisse angezeigt');
+        }
+    </script>
+</body>
+</html>
