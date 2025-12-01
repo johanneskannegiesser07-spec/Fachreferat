@@ -2563,128 +2563,124 @@ Lernempfehlungen:
             return 300  # Fallback: 5 Minuten
 
     def finish_test_session_complete(self, username: str, test_id: str) -> dict:
-        """
-        🏁 BEENDET TEST-SESSION - VOLLSTÄNDIG NEUE VERSION
-        Mit korrekter Datenstruktur für das Frontend
-        """
-        user_hash = self._get_user_hash(username)
-        
-        print(f"🔍 FINISH_TEST_SESSION_COMPLETE: Start für Test {test_id}")
-        
-        try:
-            conn = sqlite3.connect(self.db_path, timeout=20.0)
-            cursor = conn.cursor()
+            """
+            🏁 BEENDET TEST-SESSION - VOLLSTÄNDIG NEUE VERSION
+            Mit korrekter Datenstruktur für das Frontend
+            """
+            user_hash = self._get_user_hash(username)
             
-            # Hole Test-Daten
-            cursor.execute('''
-                SELECT subject, topic, questions, user_answers, total_questions, start_time 
-                FROM test_sessions WHERE test_id = ? AND user_hash = ?
-            ''', (test_id, user_hash))
+            print(f"🔍 FINISH_TEST_SESSION_COMPLETE: Start für Test {test_id}")
             
-            test_data = cursor.fetchone()
-            if not test_data:
-                return {"error": "Test nicht gefunden"}
-            
-            subject, topic, questions_json, answers_json, total_questions, start_time = test_data
-            
-            print(f"🔍 Fragen JSON Länge: {len(questions_json) if questions_json else 0}")
-            print(f"🔍 Antworten JSON: {answers_json}")
-            
-            # Parse die Daten
-            questions_data = json.loads(questions_json) if questions_json else {}
-            user_answers = json.loads(answers_json) if answers_json and answers_json != '[]' else []
-            
-            print(f"🔍 User Answers nach Parse: {len(user_answers)}")
-            
-            # Extrahiere Fragen
-            questions = []
-            if isinstance(questions_data, dict) and 'exercises' in questions_data:
-                questions = questions_data['exercises']
-            elif isinstance(questions_data, list):
-                questions = questions_data
-            else:
+            try:
+                conn = sqlite3.connect(self.db_path, timeout=20.0)
+                cursor = conn.cursor()
+                
+                # Hole Test-Daten
+                cursor.execute('''
+                    SELECT subject, topic, questions, user_answers, total_questions, start_time 
+                    FROM test_sessions WHERE test_id = ? AND user_hash = ?
+                ''', (test_id, user_hash))
+                
+                test_data = cursor.fetchone()
+                if not test_data:
+                    return {"error": "Test nicht gefunden"}
+                
+                subject, topic, questions_json, answers_json, total_questions, start_time = test_data
+                
+                # Parse die Daten
+                questions_data = json.loads(questions_json) if questions_json else {}
+                user_answers = json.loads(answers_json) if answers_json and answers_json != '[]' else []
+                
+                # Extrahiere Fragen
                 questions = []
-            
-            print(f"🔍 Gefundene Fragen: {len(questions)}")
-            
-            # BERECHNE ERGEBNISSE
-            correct_count = 0
-            detailed_answers = []
-            
-            for i in range(len(questions)):
-                question = questions[i]
+                if isinstance(questions_data, dict) and 'exercises' in questions_data:
+                    questions = questions_data['exercises']
+                elif isinstance(questions_data, list):
+                    questions = questions_data
+                else:
+                    questions = []
                 
-                # Finde Antwort für diese Frage
-                user_answer_data = None
-                for answer in user_answers:
-                    if answer.get('question_index') == i:
-                        user_answer_data = answer
-                        break
+                # BERECHNE ERGEBNISSE
+                correct_count = 0
+                detailed_answers = []
                 
-                user_answer_list = user_answer_data.get('user_answer', []) if user_answer_data else []
-                correct_answers = question.get('correct_answers', [])
+                for i in range(len(questions)):
+                    question = questions[i]
+                    
+                    # Finde Antwort für diese Frage
+                    user_answer_data = None
+                    for answer in user_answers:
+                        if answer.get('question_index') == i:
+                            user_answer_data = answer
+                            break
+                    
+                    user_answer_list = user_answer_data.get('user_answer', []) if user_answer_data else []
+                    correct_answers = question.get('correct_answers', [])
+                    
+                    # Vergleiche Antworten
+                    user_set = set(user_answer_list)
+                    correct_set = set(correct_answers)
+                    is_correct = user_set == correct_set
+                    
+                    if is_correct:
+                        correct_count += 1
+                    
+                    # Erstelle detaillierte Antwort
+                    detailed_answers.append({
+                        'question_index': i,
+                        'question': question.get('question', f'Frage {i+1}'),
+                        'user_answers': user_answer_list,
+                        'correct_answers': correct_answers,
+                        'is_correct': is_correct,
+                        'explanation': question.get('explanation', 'Keine Erklärung verfügbar'),
+                        'options': question.get('options', {})
+                    })
                 
-                print(f"🔍 Frage {i}: User={user_answer_list}, Correct={correct_answers}")
+                # Score berechnen
+                score = (correct_count / len(questions)) * 100 if questions else 0
                 
-                # Vergleiche Antworten
-                user_set = set(user_answer_list)
-                correct_set = set(correct_answers)
-                is_correct = user_set == correct_set
+                # Zeit berechnen
+                time_spent = self._calculate_time_spent(start_time)
                 
-                if is_correct:
-                    correct_count += 1
+                # Update Test-Session
+                cursor.execute('''
+                    UPDATE test_sessions 
+                    SET end_time = CURRENT_TIMESTAMP, score = ?, correct_answers = ?, 
+                        time_spent_seconds = ?, status = 'completed'
+                    WHERE test_id = ?
+                ''', (score, correct_count, time_spent, test_id))
                 
-                # Erstelle detaillierte Antwort
-                detailed_answers.append({
-                    'question_index': i,
-                    'question': question.get('question', f'Frage {i+1}'),
-                    'user_answers': user_answer_list,
-                    'correct_answers': correct_answers,
-                    'is_correct': is_correct,
-                    'explanation': question.get('explanation', 'Keine Erklärung verfügbar'),
-                    'options': question.get('options', {})
-                })
-            
-            # Score berechnen
-            score = (correct_count / len(questions)) * 100 if questions else 0
-            
-            # Zeit berechnen
-            time_spent = self._calculate_time_spent(start_time)
-            
-            print(f"🔍 Ergebnis: {correct_count}/{len(questions)} richtig, Score: {score}%")
-            
-            # Update Test-Session
-            cursor.execute('''
-                UPDATE test_sessions 
-                SET end_time = CURRENT_TIMESTAMP, score = ?, correct_answers = ?, 
-                    time_spent_seconds = ?, status = 'completed'
-                WHERE test_id = ?
-            ''', (score, correct_count, time_spent, test_id))
-            
-            conn.commit()
-            conn.close()
-            
-            # KI-Auswertung
-            comprehensive_feedback = self._get_comprehensive_feedback(score, correct_count, len(questions), detailed_answers)
-            
-            return {
-                "test_id": test_id,
-                "score": round(score, 1),
-                "correct_answers": correct_count,
-                "total_questions": len(questions),
-                "time_spent_seconds": round(time_spent),
-                "performance_level": self._get_performance_level(score),
-                "subject": subject,
-                "topic": topic,
-                "comprehensive_feedback": comprehensive_feedback,
-                "detailed_answers": detailed_answers
-            }
-            
-        except Exception as e:
-            print(f"❌ Fehler in finish_test_session_complete: {e}")
-            import traceback
-            traceback.print_exc()
-            return self._get_fallback_result(test_id)
+                conn.commit()
+                conn.close()
+                
+                # --- KI-ANALYSE STARTEN ---
+                print(f"🧠 Starte KI-Analyse für Test {test_id}...")
+                try:
+                    # Wir rufen die KI-Methode auf
+                    comprehensive_feedback = self.generate_comprehensive_feedback(username, test_id)
+                except Exception as ki_error:
+                    print(f"⚠️ KI-Fehler, nutze Fallback: {ki_error}")
+                    # Fallback, falls KI nicht antwortet
+                    comprehensive_feedback = self._get_comprehensive_feedback(score, correct_count, len(questions), detailed_answers)
+                
+                return {
+                    "test_id": test_id,
+                    "score": round(score, 1),
+                    "correct_answers": correct_count,
+                    "total_questions": len(questions),
+                    "time_spent_seconds": round(time_spent),
+                    "performance_level": self._get_performance_level(score),
+                    "subject": subject,
+                    "topic": topic,
+                    "comprehensive_feedback": comprehensive_feedback,
+                    "detailed_answers": detailed_answers
+                }
+                
+            except Exception as e:
+                print(f"❌ Fehler in finish_test_session_complete: {e}")
+                import traceback
+                traceback.print_exc()
+                return self._get_fallback_result(test_id)
 
     def _get_comprehensive_feedback(self, score: float, correct_answers: int, total_questions: int, detailed_answers: list) -> dict:
         """Erstellt umfassendes Feedback ohne KI"""
