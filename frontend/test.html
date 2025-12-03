@@ -619,20 +619,26 @@
             }
         }
 
-        function updateTimerDisplay() {
-            const minutes = Math.floor(timeRemaining / 60);
-            const seconds = timeRemaining % 60;
-            document.getElementById('timer').textContent = 
-                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            
-            if (timeRemaining < 60) {
-                document.getElementById('timer').style.color = '#dc3545';
-                document.getElementById('timer').style.borderColor = '#dc3545';
-            } else if (timeRemaining < 300) {
-                document.getElementById('timer').style.color = '#ffc107';
-                document.getElementById('timer').style.borderColor = '#ffc107';
-            }
-        }
+        function startTimer() {
+                    // Sofort einmal anzeigen, damit nicht 00:00 steht bis zum ersten Tick
+                    updateTimerDisplay();
+                    
+                    // Falls aus Versehen noch ein Timer läuft: stoppen
+                    if (testTimer) clearInterval(testTimer);
+
+                    testTimer = setInterval(() => {
+                        timeRemaining--;
+                        updateTimerDisplay();
+                        
+                        // Wenn Zeit abgelaufen ist
+                        if (timeRemaining <= 0) {
+                            clearInterval(testTimer);
+                            // Optional: Nutzer warnen oder Test automatisch beenden
+                            // alert("Zeit abgelaufen!"); 
+                            finishTest(); 
+                        }
+                    }, 1000); // 1000 ms = 1 Sekunde
+                }
 
         function loadQuestion(index) {
             debugLog(`Lade Frage ${index}...`);
