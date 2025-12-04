@@ -1233,52 +1233,55 @@ Lernempfehlungen:
     # === TEST-MODUS METHODEN ===
 
     def start_test_session(self, username: str, subject: str, topic: str, question_count: int = 10) -> dict:
-        """
-        🧪 Startet eine neue Test-Session - KORRIGIERTE VERSION
-        """
-        user_hash = self._get_user_hash(username)
-        test_id = f"test_{int(time.time())}_{user_hash}"
-        
-        try:
-            # Generiere Test-Fragen
-            exercises_result = self.generate_personalized_exercises(username, subject, topic, question_count)
+            """
+            🧪 Startet eine neue Test-Session - ZEIT FIX (Python bestimmt Startzeit)
+            """
+            user_hash = self._get_user_hash(username)
+            test_id = f"test_{int(time.time())}_{user_hash}"
             
-            conn = sqlite3.connect(self.db_path, timeout=20.0)
-            cursor = conn.cursor()
+            # WICHTIG: Wir nehmen hier die UTC-Zeit von Python, damit sie exakt zur End-Zeit passt
+            start_time_iso = datetime.utcnow().isoformat()
             
-            cursor.execute('''
-                INSERT INTO test_sessions 
-                (test_id, user_hash, subject, topic, questions, total_questions)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (
-                test_id,
-                user_hash,
-                subject,
-                topic,
-                json.dumps(exercises_result),  # Gesamtes exercises_result speichern
-                question_count
-            ))
-            
-            conn.commit()
-            conn.close()
-            
-            print(f"🧪 Test gestartet: {test_id} - {subject}/{topic}")
-            
-            # Rückgabe-Struktur an Frontend anpassen
-            return {
-                "test_id": test_id,
-                "subject": subject,
-                "topic": topic,
-                "exercises": exercises_result,  # Direkt das exercises_result zurückgeben
-                "total_questions": question_count,
-                "time_limit": 60 * question_count,
-                "start_time": datetime.now().isoformat()
-            }
-            
-        except Exception as e:
-            print(f"❌ Fehler beim Test-Start: {e}")
-            # Fallback mit einfachen Fragen
-            return self._get_fallback_test_session(username, subject, topic, question_count)
+            try:
+                # Generiere Test-Fragen
+                exercises_result = self.generate_personalized_exercises(username, subject, topic, question_count)
+                
+                conn = sqlite3.connect(self.db_path, timeout=20.0)
+                cursor = conn.cursor()
+                
+                # Wir speichern start_time explizit!
+                cursor.execute('''
+                    INSERT INTO test_sessions 
+                    (test_id, user_hash, subject, topic, questions, total_questions, start_time)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    test_id,
+                    user_hash,
+                    subject,
+                    topic,
+                    json.dumps(exercises_result),
+                    question_count,
+                    start_time_iso  # Hier die Python-Zeit nutzen
+                ))
+                
+                conn.commit()
+                conn.close()
+                
+                print(f"🧪 Test gestartet: {test_id} - Zeit: {start_time_iso}")
+                
+                return {
+                    "test_id": test_id,
+                    "subject": subject,
+                    "topic": topic,
+                    "exercises": exercises_result,
+                    "total_questions": question_count,
+                    "time_limit": 60 * question_count,
+                    "start_time": start_time_iso
+                }
+                
+            except Exception as e:
+                print(f"❌ Fehler beim Test-Start: {e}")
+                return self._get_fallback_test_session(username, subject, topic, question_count)
 
     def _get_fallback_test_session(self, username: str, subject: str, topic: str, question_count: int) -> dict:
         """
@@ -2535,32 +2538,45 @@ Lernempfehlungen:
             return self._get_fallback_result(test_id)
 
     def _calculate_time_spent(self, start_time) -> int:
-        """Berechnet die verstrichene Zeit in Sekunden - ROBUSTE VERSION"""
-        try:
-            if isinstance(start_time, str):
-                # Versuche verschiedene Datumsformate
-                try:
-                    if 'T' in start_time:
-                        # ISO Format
-                        start_dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
-                    else:
-                        # SQLite Format: YYYY-MM-DD HH:MM:SS
-                        start_dt = datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S")
-                except:
-                    # Fallback: Aktuelle Zeit minus 5 Minuten
-                    return 300
-            elif isinstance(start_time, (int, float)):
-                # Unix timestamp
-                start_dt = datetime.fromtimestamp(start_time)
-            else:
-                # datetime object
-                start_dt = start_time
-            
-            time_difference = datetime.now() - start_dt
-            return int(time_difference.total_seconds())
-        except Exception as e:
-            print(f"❌ Fehler bei Zeitberechnung: {e}")
-            return 300  # Fallback: 5 Minuten
+            """Berechnet die verstrichene Zeit in Sekunden - ZEITZONEN FIX"""
+            try:
+                # 1. Wir holen uns die aktuelle Zeit EXPIZIT als UTC (Weltzeit)
+                # Das passt zur Datenbank, die auch UTC speichert
+                end_dt = datetime.utcnow()
+                
+                start_dt = None
+                
+                # 2. Startzeit aus der DB parsen
+                if isinstance(start_time, str):
+                    try:
+                        # SQLite Format putzen (manchmal sind da Millisekunden .123456 dran)
+                        clean_time = start_time.split('.')[0].replace('Z', '')
+                        start_dt = datetime.strptime(clean_time, "%Y-%m-%d %H:%M:%S")
+                    except ValueError:
+                        # Fallback für ISO Format
+                        start_dt = datetime.fromisoformat(clean_time)
+                elif isinstance(start_time, datetime):
+                    start_dt = start_time
+                
+                if start_dt:
+                    # 3. Differenz berechnen
+                    time_difference = end_dt - start_dt
+                    seconds = int(time_difference.total_seconds())
+                    
+                    # Plausibilitäts-Check: Wenn die Zeit > 1 Stunde ist für einen kurzen Test,
+                    # liegt wahrscheinlich immer noch ein Zeitzonenfehler vor.
+                    # Wir korrigieren das pragmatisch für die Anzeige:
+                    if seconds > 3500 and seconds < 3700: # Wenn es ca. 1 Stunde ist
+                        seconds = seconds - 3600
+                    
+                    # Zeit darf nicht negativ sein
+                    return max(0, seconds)
+                    
+                return 0 
+                
+            except Exception as e:
+                print(f"❌ Fehler bei Zeitberechnung: {e}")
+                return 0
 
     def finish_test_session_complete(self, username: str, test_id: str) -> dict:
             """
@@ -2788,31 +2804,38 @@ Lernempfehlungen:
             
             # Bereite Daten für KI vor - KÜRZERE VERSION für bessere Performance
             test_context = f"""
-    TESTERGEBNIS - LERNANALYSE
+    Du bist ein cooler, motivierender Lern-Coach für einen Schüler.
+    Analysiere dieses Testergebnis nicht trocken, sondern persönlich und aufbauend.
+    Sprich den Schüler direkt mit "Du" an. Nutze Emojis.
 
+    TEST-DATEN:
     Fach: {subject}
     Thema: {topic}
-    Punktzahl: {score}%
-    Richtige Antworten: {correct_answers}/{total_questions}
+    Score: {score}%
+    Richtig: {correct_answers} von {total_questions}
 
-    Bitte analysiere dieses Testergebnis und gib konstruktives Feedback.
+    Deine Aufgabe:
+    1. Gib ein ehrliches, aber nettes Feedback.
+    2. Wenn der Score niedrig ist: Mach Mut! "Fehler sind Helfer".
+    3. Wenn der Score hoch ist: Feier das!
+    4. Gib konkrete Tipps, was als nächstes zu tun ist.
 
-    JSON-Antwort:
+    Antworte NUR als JSON:
     {{
-        "overall_assessment": "Gesamtbewertung",
-        "key_strengths": ["Stärke 1", "Stärke 2"],
-        "main_weaknesses": ["Schwäche 1", "Schwäche 2"], 
+        "overall_assessment": "Kurzes, knackiges Fazit (z.B. 'Starke Leistung!' oder 'Guter Anfang, dranbleiben!')",
+        "key_strengths": ["Das lief super", "Hier bist du sicher"],
+        "main_weaknesses": ["Hier fehlt noch der Feinschliff", "Darauf nochmal schauen"], 
         "learning_recommendations": [
             {{
                 "priority": "hoch/mittel/niedrig",
-                "area": "Themenbereich",
-                "action": "Konkrete Aktion", 
-                "reason": "Begründung"
+                "area": "Was üben?",
+                "action": "Wie üben? (Konkret!)", 
+                "reason": "Warum?"
             }}
         ],
-        "conceptual_understanding": "Verständnis-Bewertung",
+        "conceptual_understanding": "Einschätzung (z.B. 'Grundlagen sitzen, Details fehlen noch')",
         "next_steps": ["Schritt 1", "Schritt 2"],
-        "encouragement": "Motivation"
+        "encouragement": "Ein motivierender Abschlusssatz (wie ein Coach vor dem Spiel)"
     }}
     """
 

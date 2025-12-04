@@ -795,36 +795,79 @@
         }
 
         async function finishTest() {
-            // SPEICHERE die aktuelle Antwort bevor Test beendet wird
-            await saveCurrentAnswerToDB();
+                    // SPEICHERE die aktuelle Antwort bevor Test beendet wird
+                    await saveCurrentAnswerToDB();
 
-            if (testTimer) {
-                clearInterval(testTimer);
-            }
+                    if (testTimer) {
+                        clearInterval(testTimer);
+                    }
 
-            try {
-                showOutput('🏁 Beende Test und wertet aus...', 'loading');
-                
-                if (!currentTest || !currentTest.test_id) {
-                    showOutput('❌ Keine gültige Test-Session gefunden', 'error');
-                    return;
+                    try {
+                        // --- NEU: UI SOFORT AKTUALISIEREN ---
+                        // 1. Test ausblenden
+                        document.getElementById('activeTest').classList.add('hidden');
+                        
+                        // 2. Lade-Bildschirm im Ergebnis-Bereich anzeigen
+                        const resultContainer = document.getElementById('testResult');
+                        resultContainer.classList.remove('hidden');
+                        resultContainer.style.display = 'block';
+                        
+                        // Schöner Lade-Screen
+                        resultContainer.innerHTML = `
+                            <div class="result-content" style="padding: 50px 20px;">
+                                <div style="font-size: 3rem; margin-bottom: 20px;">🧠</div>
+                                <h2>KI wertet aus...</h2>
+                                <p style="color: #666; font-size: 1.1rem;">Deine Antworten werden analysiert und ein Feedback erstellt.</p>
+                                <p>Das dauert einen kleinen Moment.</p>
+                            </div>
+                        `;
+                        // -------------------------------------
+
+                        if (!currentTest || !currentTest.test_id) {
+                            showOutput('❌ Keine gültige Test-Session gefunden', 'error');
+                            return;
+                        }
+
+                        const result = await apiCall('/api/finish-test', 'POST', {
+                            test_id: currentTest.test_id
+                        });
+
+                        if (result.success) {
+                            // Hier wird der Lade-Screen mit dem echten Ergebnis überschrieben
+                            // Wir müssen den Container erst leeren/resetten, damit displayTestResult sauber reinrendert
+                            resultContainer.innerHTML = `
+                                <div class="result-content">
+                                    <h2>📊 Testergebnis</h2>
+                                    <div style="text-align: center; margin: 10px 0;">
+                                        </div>
+                                    <div class="score-circle" id="scoreCircle"></div>
+                                    <div id="performanceBadge" class="performance-badge"></div>
+                                    <div style="margin: 20px 0; font-size: 1.1em;">
+                                        <p><strong>Richtige Antworten:</strong> <span id="correctAnswers"></span>/<span id="totalQuestions"></span></p>
+                                        <p><strong>Zeit:</strong> <span id="timeSpent"></span> Sekunden</p>
+                                        <p><strong>Thema:</strong> <span id="resultTopic"></span></p>
+                                    </div>
+                                    <div id="detailedResults" class="results-container"><div id="questionsContainer"></div></div>
+                                    <div id="feedbackResults" class="results-container"><div id="feedbackContainer"></div></div>
+                                    <div style="margin-top: 30px;">
+                                        <button onclick="newTest()" class="success" style="margin: 5px;">🔄 Neuer Test</button>
+                                        <button onclick="goToDashboard()" class="secondary" style="margin: 5px;">📊 Zum Dashboard</button>
+                                    </div>
+                                </div>
+                            `;
+                            
+                            displayTestResult(result.data);
+                            showOutput('✅ Test erfolgreich abgeschlossen!', 'success');
+                        } else {
+                            showOutput('❌ Test konnte nicht abgeschlossen werden', 'error');
+                            // Falls Fehler: Test wieder einblenden oder Fehlermeldung im Result Container
+                            resultContainer.innerHTML = `<div class="result-content"><h3>❌ Fehler bei der Auswertung</h3><button onclick="window.location.reload()">Neu laden</button></div>`;
+                        }
+                    } catch (error) {
+                        debugLog('Fehler beim Test-Abschluss: ' + error.message);
+                        showOutput('❌ Fehler beim Test-Abschluss: ' + error.message, 'error');
+                    }
                 }
-
-                const result = await apiCall('/api/finish-test', 'POST', {
-                    test_id: currentTest.test_id
-                });
-
-                if (result.success) {
-                    displayTestResult(result.data);
-                    showOutput('✅ Test erfolgreich abgeschlossen!', 'success');
-                } else {
-                    showOutput('❌ Test konnte nicht abgeschlossen werden', 'error');
-                }
-            } catch (error) {
-                debugLog('Fehler beim Test-Abschluss: ' + error.message);
-                showOutput('❌ Fehler beim Test-Abschluss: ' + error.message, 'error');
-            }
-        }
 
         // NEUE DISPLAY-FUNKTION MIT GARANTIERTER ANZEIGE
         function displayTestResult(result) {
