@@ -2763,38 +2763,39 @@ Lernempfehlungen:
             
             # Bereite Daten für KI vor - KÜRZERE VERSION für bessere Performance
             test_context = f"""
-    Du bist ein cooler, motivierender Lern-Coach für einen Schüler.
-    Analysiere dieses Testergebnis nicht trocken, sondern persönlich und aufbauend.
-    Sprich den Schüler direkt mit "Du" an. Nutze Emojis.
+    Du bist ein energetischer, cooler Lern-Coach für Schüler. 
+    Deine Mission: MOTIVATION PUR! 🚀
+    
+    Analysiere dieses Testergebnis. Sei nicht langweilig! Sei wie ein YouTuber oder Sport-Coach.
+    Sprich den Schüler direkt mit "Du" an. Nutze viele Emojis.
 
-    TEST-DATEN:
+    DATEN:
     Fach: {subject}
     Thema: {topic}
-    Score: {score}%
-    Richtig: {correct_answers} von {total_questions}
+    Ergebnis: {score}% ({correct_answers} von {total_questions} richtig)
 
-    Deine Aufgabe:
-    1. Gib ein ehrliches, aber nettes Feedback.
-    2. Wenn der Score niedrig ist: Mach Mut! "Fehler sind Helfer".
-    3. Wenn der Score hoch ist: Feier das!
-    4. Gib konkrete Tipps, was als nächstes zu tun ist.
+    DEINE AUFGABE:
+    1. Overall Assessment: Ein kurzer, motivierender "Hook" (z.B. "Wow, Maschine!" oder "Kopf hoch, das wird!").
+    2. Strengths: Feier, was gut lief!
+    3. Weaknesses: Nenne Fehler "Herausforderungen" oder "Level-Up Chancen".
+    4. Encouragement: Ein Rausschmeißer-Satz, der Lust auf den nächsten Test macht.
 
-    Antworte NUR als JSON:
+    Antworte STRENG als JSON:
     {{
-        "overall_assessment": "Kurzes, knackiges Fazit (z.B. 'Starke Leistung!' oder 'Guter Anfang, dranbleiben!')",
-        "key_strengths": ["Das lief super", "Hier bist du sicher"],
-        "main_weaknesses": ["Hier fehlt noch der Feinschliff", "Darauf nochmal schauen"], 
+        "overall_assessment": "Dein motivierendes Fazit",
+        "key_strengths": ["Stärke 1", "Stärke 2"],
+        "main_weaknesses": ["Hier kannst du noch punkten 1", "Hier leveln wir noch hoch 2"], 
         "learning_recommendations": [
             {{
                 "priority": "hoch/mittel/niedrig",
-                "area": "Was üben?",
-                "action": "Wie üben? (Konkret!)", 
-                "reason": "Warum?"
+                "area": "Was genau?",
+                "action": "Konkreter Tipp (kurz & knackig)", 
+                "reason": "Warum hilft das?"
             }}
         ],
-        "conceptual_understanding": "Einschätzung (z.B. 'Grundlagen sitzen, Details fehlen noch')",
+        "conceptual_understanding": "Einschätzung (z.B. 'Grundlagen sitzen, jetzt geht's an die Details')",
         "next_steps": ["Schritt 1", "Schritt 2"],
-        "encouragement": "Ein motivierender Abschlusssatz (wie ein Coach vor dem Spiel)"
+        "encouragement": "Dein finaler Motivations-Spruch"
     }}
     """
 
@@ -2978,70 +2979,38 @@ Lernempfehlungen:
             return False
 
 
-    def _calculate_time_spent(self, start_time) -> int:
-        """Berechnet die verstrichene Zeit in Sekunden"""
+def _calculate_time_spent(self, start_time) -> int:
+        """Berechnet die verstrichene Zeit in Sekunden - ZEITZONEN FIX (UTC)"""
         try:
-            if isinstance(start_time, str):
-                # ISO Format oder SQLite Timestamp
-                if 'T' in start_time:
-                    start_dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
-                else:
-                    start_dt = datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S")
-            else:
-                # Unix timestamp oder datetime object
-                start_dt = datetime.fromtimestamp(start_time) if isinstance(start_time, (int, float)) else start_time
+            # 1. Wir holen uns das "JETZT" als UTC (Weltzeit), genau wie die Datenbank
+            end_dt = datetime.utcnow()
             
-            return int((datetime.now() - start_dt).total_seconds())
+            start_dt = None
+            if isinstance(start_time, str):
+                try:
+                    # SQLite Format putzen
+                    clean_time = start_time.split('.')[0].replace('Z', '')
+                    # Wir gehen davon aus, dass die DB-Zeit UTC ist
+                    start_dt = datetime.strptime(clean_time, "%Y-%m-%d %H:%M:%S")
+                except ValueError:
+                    # Fallback für ISO Format
+                    start_dt = datetime.fromisoformat(clean_time)
+            elif isinstance(start_time, datetime):
+                start_dt = start_time
+            
+            if start_dt:
+                # Differenz berechnen (UTC minus UTC)
+                time_difference = end_dt - start_dt
+                seconds = int(time_difference.total_seconds())
+                
+                # Plausibilitäts-Check: Zeit kann nicht negativ sein
+                return max(0, seconds)
+                
+            return 0 
+            
         except Exception as e:
             print(f"❌ Fehler bei Zeitberechnung: {e}")
-            return 300  # Fallback: 5 Minuten
-
-    def debug_test_data(self, test_id: str):
-        """🔍 Debug-Methode zum Überprüfen der Test-Daten"""
-        try:
-            conn = sqlite3.connect(self.db_path, timeout=20.0)
-            cursor = conn.cursor()
-            
-            cursor.execute('''
-                SELECT test_id, subject, topic, questions, user_answers, total_questions, 
-                    start_time, status, score, correct_answers
-                FROM test_sessions WHERE test_id = ?
-            ''', (test_id,))
-            
-            test_data = cursor.fetchone()
-            conn.close()
-            
-            if test_data:
-                print("🔍 DEBUG TEST DATEN:")
-                print(f"Test ID: {test_data[0]}")
-                print(f"Subject: {test_data[1]}")
-                print(f"Topic: {test_data[2]}")
-                print(f"Questions JSON Länge: {len(test_data[3]) if test_data[3] else 0}")
-                print(f"User Answers: {test_data[4]}")
-                print(f"Total Questions: {test_data[5]}")
-                print(f"Status: {test_data[7]}")
-                print(f"Score: {test_data[8]}")
-                print(f"Correct Answers: {test_data[9]}")
-                
-                # Parse und zeige Fragen
-                if test_data[3]:
-                    try:
-                        questions = json.loads(test_data[3])
-                        print(f"Fragen-Struktur: {type(questions)}")
-                        if isinstance(questions, dict) and 'exercises' in questions:
-                            print(f"Anzahl Fragen: {len(questions['exercises'])}")
-                            for i, q in enumerate(questions['exercises'][:2]):  # Zeige nur erste 2 Fragen
-                                print(f"Frage {i}: {q.get('question', '')[:50]}...")
-                                print(f"  Optionen: {list(q.get('options', {}).keys())}")
-                                print(f"  Korrekte Antworten: {q.get('correct_answers', [])}")
-                    except Exception as e:
-                        print(f"Fehler beim Parsen der Fragen: {e}")
-            else:
-                print("❌ Test nicht gefunden")
-                
-        except Exception as e:
-            print(f"❌ Debug-Fehler: {e}")
-
+            return 0
 
 
 
