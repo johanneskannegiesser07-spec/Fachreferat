@@ -2537,47 +2537,6 @@ Lernempfehlungen:
             traceback.print_exc()
             return self._get_fallback_result(test_id)
 
-    def _calculate_time_spent(self, start_time) -> int:
-            """Berechnet die verstrichene Zeit in Sekunden - ZEITZONEN FIX"""
-            try:
-                # 1. Wir holen uns die aktuelle Zeit EXPIZIT als UTC (Weltzeit)
-                # Das passt zur Datenbank, die auch UTC speichert
-                end_dt = datetime.utcnow()
-                
-                start_dt = None
-                
-                # 2. Startzeit aus der DB parsen
-                if isinstance(start_time, str):
-                    try:
-                        # SQLite Format putzen (manchmal sind da Millisekunden .123456 dran)
-                        clean_time = start_time.split('.')[0].replace('Z', '')
-                        start_dt = datetime.strptime(clean_time, "%Y-%m-%d %H:%M:%S")
-                    except ValueError:
-                        # Fallback für ISO Format
-                        start_dt = datetime.fromisoformat(clean_time)
-                elif isinstance(start_time, datetime):
-                    start_dt = start_time
-                
-                if start_dt:
-                    # 3. Differenz berechnen
-                    time_difference = end_dt - start_dt
-                    seconds = int(time_difference.total_seconds())
-                    
-                    # Plausibilitäts-Check: Wenn die Zeit > 1 Stunde ist für einen kurzen Test,
-                    # liegt wahrscheinlich immer noch ein Zeitzonenfehler vor.
-                    # Wir korrigieren das pragmatisch für die Anzeige:
-                    if seconds > 3500 and seconds < 3700: # Wenn es ca. 1 Stunde ist
-                        seconds = seconds - 3600
-                    
-                    # Zeit darf nicht negativ sein
-                    return max(0, seconds)
-                    
-                return 0 
-                
-            except Exception as e:
-                print(f"❌ Fehler bei Zeitberechnung: {e}")
-                return 0
-
     def finish_test_session_complete(self, username: str, test_id: str) -> dict:
             """
             🏁 BEENDET TEST-SESSION - VOLLSTÄNDIG NEUE VERSION
