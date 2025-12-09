@@ -1234,22 +1234,24 @@ Lernempfehlungen:
 
     def start_test_session(self, username: str, subject: str, topic: str, question_count: int = 10) -> dict:
             """
-            🧪 Startet eine neue Test-Session - ZEIT FIX (Python bestimmt Startzeit)
+            🧪 Startet eine neue Test-Session - TIMER FIX
             """
             user_hash = self._get_user_hash(username)
+            # ID wird sofort erstellt
             test_id = f"test_{int(time.time())}_{user_hash}"
             
-            # WICHTIG: Wir nehmen hier die UTC-Zeit von Python, damit sie exakt zur End-Zeit passt
-            start_time_iso = datetime.utcnow().isoformat()
-            
             try:
-                # Generiere Test-Fragen
+                print(f"⏳ Generiere Aufgaben für {subject}/{topic}...")
+                # 1. ERST Aufgaben generieren (das dauert kurz)
                 exercises_result = self.generate_personalized_exercises(username, subject, topic, question_count)
+                
+                # 2. JETZT erst die Zeit starten (UTC für Datenbank-Konsistenz)
+                start_time_iso = datetime.utcnow().isoformat()
                 
                 conn = sqlite3.connect(self.db_path, timeout=20.0)
                 cursor = conn.cursor()
                 
-                # Wir speichern start_time explizit!
+                # 3. Speichern
                 cursor.execute('''
                     INSERT INTO test_sessions 
                     (test_id, user_hash, subject, topic, questions, total_questions, start_time)
@@ -1261,13 +1263,13 @@ Lernempfehlungen:
                     topic,
                     json.dumps(exercises_result),
                     question_count,
-                    start_time_iso  # Hier die Python-Zeit nutzen
+                    start_time_iso  # Die korrekte Startzeit
                 ))
                 
                 conn.commit()
                 conn.close()
                 
-                print(f"🧪 Test gestartet: {test_id} - Zeit: {start_time_iso}")
+                print(f"✅ Test bereit: {test_id} - Timer startet bei: {start_time_iso}")
                 
                 return {
                     "test_id": test_id,
@@ -1282,7 +1284,7 @@ Lernempfehlungen:
             except Exception as e:
                 print(f"❌ Fehler beim Test-Start: {e}")
                 return self._get_fallback_test_session(username, subject, topic, question_count)
-
+                
     def _get_fallback_test_session(self, username: str, subject: str, topic: str, question_count: int) -> dict:
         """
         🆘 Fallback Test-Session falls KI nicht verfügbar
@@ -2641,7 +2643,7 @@ Lernempfehlungen:
                 # --- KI-ANALYSE STARTEN ---
                 print(f"🧠 Starte KI-Analyse für Test {test_id}...")
                 try:
-                    # Hier rufen wir jetzt die 'generate_'-Methode mit dem coolen Prompt auf!
+                    # HIER WAR DER FEHLER: Wir müssen 'generate_' (KI) aufrufen, nicht '_get_' (Statisch)
                     comprehensive_feedback = self.generate_comprehensive_feedback(username, test_id)
                 except Exception as ki_error:
                     print(f"⚠️ KI-Fehler, nutze Fallback: {ki_error}")
@@ -2656,7 +2658,7 @@ Lernempfehlungen:
                     "performance_level": self._get_performance_level(score),
                     "subject": subject,
                     "topic": topic,
-                    "comprehensive_feedback": comprehensive_feedback,
+                    "comprehensive_feedback": comprehensive_feedback, # Jetzt kommt das echte KI-Feedback an!
                     "detailed_answers": detailed_answers
                 }
                 
