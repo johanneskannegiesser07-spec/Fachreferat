@@ -1898,39 +1898,49 @@ Lernempfehlungen:
         }
 
     def _generate_ai_feedback(self, question_data: dict, user_answer: str, is_correct: bool) -> dict:
-        """
-        🤖 Generiert KI-Feedback für Antworten
-        """
-        try:
-            prompt = f"""
-    Bewerte diese Test-Antwort:
-
-    FRAGE: {question_data.get('question', '')}
-    RICHTIGE LÖSUNG: {question_data.get('solution', '')}
-    SCHÜLER-ANTWORT: {user_answer}
-    KORREKT: {'JA' if is_correct else 'NEIN'}
-
-    Gib konstruktives Feedback im JSON-Format:
-    {{
-        "strengths": "Was war gut an der Antwort?",
-        "improvements": "Was könnte verbessert werden?",
-        "hint": "Ein hilfreicher Hinweis",
-        "concept_explanation": "Kurze Erklärung des Konzepts"
-    }}
-    """
-            feedback = self.robust_api_call(prompt, response_format="json")
-            if feedback:
-                return json.loads(feedback)
-        except Exception as e:
-            print(f"❌ KI-Feedback Fehler: {e}")
+            """
+            🤖 Generiert KI-Feedback für eine einzelne Antwort - JETZT AUCH MOTIVIEREND 🚀
+            """
+            try:
+                # --- NEUER COOLE-COACH PROMPT ---
+                prompt = f"""
+        Du bist ein cooler Lern-Coach. Ein Schüler hat gerade eine Aufgabe gelöst.
         
-        # Fallback Feedback
-        return {
-            "strengths": "Du hast die Aufgabe bearbeitet" if user_answer else "Versuche eine Antwort zu geben",
-            "improvements": "Überprüfe deine Lösung noch einmal" if not is_correct else "Weiter so!",
-            "hint": question_data.get('explanation', ''),
-            "concept_explanation": question_data.get('explanation', 'Konzept verstehen')
-        }
+        SITUATION:
+        Frage: {question_data.get('question', '')}
+        Richtige Lösung: {question_data.get('solution', '')}
+        Antwort des Schülers: {user_answer}
+        Ergebnis: {'Richtig! 🎉' if is_correct else 'Leider falsch 😕'}
+
+        DEINE AUFGABE:
+        Gib kurzes, hilfreiches Feedback.
+        1. Wenn richtig: Feier ihn kurz! ("Stark!", "Sauber!", "Boom!")
+        2. Wenn falsch: Sei nicht streng. Erkläre locker, warum es falsch ist und gib einen Tipp ("Nicht schlimm, schau mal...", "Fast! Denk dran...").
+        3. Concept Explanation: Erkläre den Hintergrund in einem Satz, als würdest du es einem Kumpel erklären.
+
+        Antworte als JSON:
+        {{
+            "strengths": "Was war gut? (oder motivierender Zuspruch)",
+            "improvements": "Wo lag der Fehler? (nett formuliert)",
+            "hint": "Ein cooler Merksatz oder Tipp",
+            "concept_explanation": "Die Erklärung in einfacher Sprache"
+        }}
+        """
+                # --------------------------------
+                
+                feedback = self.robust_api_call(prompt, response_format="json")
+                if feedback:
+                    return json.loads(feedback)
+            except Exception as e:
+                print(f"❌ KI-Feedback Fehler: {e}")
+            
+            # Fallback Feedback (bleibt gleich)
+            return {
+                "strengths": "Du hast die Aufgabe bearbeitet" if user_answer else "Versuche eine Antwort zu geben",
+                "improvements": "Überprüfe deine Lösung noch einmal" if not is_correct else "Weiter so!",
+                "hint": question_data.get('explanation', ''),
+                "concept_explanation": question_data.get('explanation', 'Konzept verstehen')
+            }
 
     def _analyze_test_results(self, test_id: str, user_hash: str) -> dict:
         """
@@ -2631,11 +2641,10 @@ Lernempfehlungen:
                 # --- KI-ANALYSE STARTEN ---
                 print(f"🧠 Starte KI-Analyse für Test {test_id}...")
                 try:
-                    # Wir rufen die KI-Methode auf
+                    # Hier rufen wir jetzt die 'generate_'-Methode mit dem coolen Prompt auf!
                     comprehensive_feedback = self.generate_comprehensive_feedback(username, test_id)
                 except Exception as ki_error:
                     print(f"⚠️ KI-Fehler, nutze Fallback: {ki_error}")
-                    # Fallback, falls KI nicht antwortet
                     comprehensive_feedback = self._get_comprehensive_feedback(score, correct_count, len(questions), detailed_answers)
                 
                 return {
@@ -2763,38 +2772,39 @@ Lernempfehlungen:
             
             # Bereite Daten für KI vor - KÜRZERE VERSION für bessere Performance
             test_context = f"""
-    Du bist ein cooler, motivierender Lern-Coach für einen Schüler.
-    Analysiere dieses Testergebnis nicht trocken, sondern persönlich und aufbauend.
-    Sprich den Schüler direkt mit "Du" an. Nutze Emojis.
+    Du bist ein energetischer, cooler Lern-Coach für Schüler. 
+    Deine Mission: MOTIVATION PUR! 🚀
+    
+    Analysiere dieses Testergebnis. Sei nicht langweilig! Sei wie ein YouTuber oder Sport-Coach.
+    Sprich den Schüler direkt mit "Du" an. Nutze viele Emojis.
 
-    TEST-DATEN:
+    DATEN:
     Fach: {subject}
     Thema: {topic}
-    Score: {score}%
-    Richtig: {correct_answers} von {total_questions}
+    Ergebnis: {score}% ({correct_answers} von {total_questions} richtig)
 
-    Deine Aufgabe:
-    1. Gib ein ehrliches, aber nettes Feedback.
-    2. Wenn der Score niedrig ist: Mach Mut! "Fehler sind Helfer".
-    3. Wenn der Score hoch ist: Feier das!
-    4. Gib konkrete Tipps, was als nächstes zu tun ist.
+    DEINE AUFGABE:
+    1. Overall Assessment: Ein kurzer, motivierender "Hook" (z.B. "Wow, Maschine!" oder "Kopf hoch, das wird!").
+    2. Strengths: Feier, was gut lief!
+    3. Weaknesses: Nenne Fehler "Herausforderungen" oder "Level-Up Chancen".
+    4. Encouragement: Ein Rausschmeißer-Satz, der Lust auf den nächsten Test macht.
 
-    Antworte NUR als JSON:
+    Antworte STRENG als JSON:
     {{
-        "overall_assessment": "Kurzes, knackiges Fazit (z.B. 'Starke Leistung!' oder 'Guter Anfang, dranbleiben!')",
-        "key_strengths": ["Das lief super", "Hier bist du sicher"],
-        "main_weaknesses": ["Hier fehlt noch der Feinschliff", "Darauf nochmal schauen"], 
+        "overall_assessment": "Dein motivierendes Fazit",
+        "key_strengths": ["Stärke 1", "Stärke 2"],
+        "main_weaknesses": ["Hier kannst du noch punkten 1", "Hier leveln wir noch hoch 2"], 
         "learning_recommendations": [
             {{
                 "priority": "hoch/mittel/niedrig",
-                "area": "Was üben?",
-                "action": "Wie üben? (Konkret!)", 
-                "reason": "Warum?"
+                "area": "Was genau?",
+                "action": "Konkreter Tipp (kurz & knackig)", 
+                "reason": "Warum hilft das?"
             }}
         ],
-        "conceptual_understanding": "Einschätzung (z.B. 'Grundlagen sitzen, Details fehlen noch')",
+        "conceptual_understanding": "Einschätzung (z.B. 'Grundlagen sitzen, jetzt geht's an die Details')",
         "next_steps": ["Schritt 1", "Schritt 2"],
-        "encouragement": "Ein motivierender Abschlusssatz (wie ein Coach vor dem Spiel)"
+        "encouragement": "Dein finaler Motivations-Spruch"
     }}
     """
 
@@ -2979,34 +2989,28 @@ Lernempfehlungen:
 
 
     def _calculate_time_spent(self, start_time) -> int:
-            """Berechnet die verstrichene Zeit in Sekunden - ZEITZONEN FIX (UTC)"""
+            """Berechnet die verstrichene Zeit in Sekunden - ZEITZONEN FIX"""
             try:
-                # 1. Wir holen uns das "JETZT" als UTC (Weltzeit), genau wie die Datenbank
+                # WICHTIG: Wir nutzen utcnow(), weil die DB auch UTC speichert!
                 end_dt = datetime.utcnow()
                 
                 start_dt = None
                 if isinstance(start_time, str):
                     try:
-                        # SQLite Format putzen
+                        # Zeit aus DB parsen (UTC)
                         clean_time = start_time.split('.')[0].replace('Z', '')
-                        # Wir gehen davon aus, dass die DB-Zeit UTC ist
                         start_dt = datetime.strptime(clean_time, "%Y-%m-%d %H:%M:%S")
                     except ValueError:
-                        # Fallback für ISO Format
                         start_dt = datetime.fromisoformat(clean_time)
                 elif isinstance(start_time, datetime):
                     start_dt = start_time
                 
                 if start_dt:
-                    # Differenz berechnen (UTC minus UTC)
                     time_difference = end_dt - start_dt
                     seconds = int(time_difference.total_seconds())
-                    
-                    # Plausibilitäts-Check: Zeit kann nicht negativ sein
                     return max(0, seconds)
                     
                 return 0 
-                
             except Exception as e:
                 print(f"❌ Fehler bei Zeitberechnung: {e}")
                 return 0
