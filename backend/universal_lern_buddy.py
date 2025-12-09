@@ -2745,94 +2745,71 @@ Lernempfehlungen:
         return "Braucht Übung"
 
     def generate_comprehensive_feedback(self, username: str, test_id: str) -> dict:
-        """
-        🧠 Generiert umfassendes KI-Feedback für den gesamten Test - MIT TIMEOUT
-        """
-        user_hash = self._get_user_hash(username)
+            """
+            🧠 Generiert umfassendes KI-Feedback - MIT COOL COACH PROMPT
+            """
+            user_hash = self._get_user_hash(username)
+            
+            try:
+                conn = sqlite3.connect(self.db_path, timeout=20.0)
+                cursor = conn.cursor()
+                
+                # Daten laden
+                cursor.execute('''
+                    SELECT subject, topic, questions, user_answers, score, correct_answers, total_questions
+                    FROM test_sessions WHERE test_id = ? AND user_hash = ?
+                ''', (test_id, user_hash))
+                
+                test_data = cursor.fetchone()
+                if not test_data:
+                    return self._get_fallback_feedback(0, 0, 0, "Test nicht gefunden")
+                
+                subject, topic, questions_json, answers_json, score, correct_answers, total_questions = test_data
+                
+                # --- DER NEUE PROMPT ---
+                test_context = f"""
+        Du bist ein energetischer, cooler Lern-Coach für Schüler. 
+        Deine Mission: MOTIVATION PUR! 🚀
         
-        try:
-            conn = sqlite3.connect(self.db_path, timeout=20.0)
-            cursor = conn.cursor()
-            
-            # Hole komplette Test-Daten
-            cursor.execute('''
-                SELECT subject, topic, questions, user_answers, score, correct_answers, total_questions
-                FROM test_sessions WHERE test_id = ? AND user_hash = ?
-            ''', (test_id, user_hash))
-            
-            test_data = cursor.fetchone()
-            if not test_data:
-                return self._get_fallback_feedback(0, 0, 0, "Test nicht gefunden")
-            
-            subject, topic, questions_json, answers_json, score, correct_answers, total_questions = test_data
-            
-            # Parse Daten
-            questions_data = json.loads(questions_json) if questions_json else {}
-            user_answers = json.loads(answers_json) if answers_json else []
-            
-            print(f"🔍 KI-Analyse: Starte für Test {test_id} mit {len(user_answers)} Antworten")
-            
-            # Bereite Daten für KI vor - KÜRZERE VERSION für bessere Performance
-            test_context = f"""
-    Du bist ein energetischer, cooler Lern-Coach für Schüler. 
-    Deine Mission: MOTIVATION PUR! 🚀
-    
-    Analysiere dieses Testergebnis. Sei nicht langweilig! Sei wie ein YouTuber oder Sport-Coach.
-    Sprich den Schüler direkt mit "Du" an. Nutze viele Emojis.
+        Analysiere dieses Testergebnis. Sei nicht langweilig! Sei wie ein YouTuber oder Sport-Coach.
+        Sprich den Schüler direkt mit "Du" an. Nutze viele Emojis.
 
-    DATEN:
-    Fach: {subject}
-    Thema: {topic}
-    Ergebnis: {score}% ({correct_answers} von {total_questions} richtig)
+        DATEN:
+        Fach: {subject}
+        Thema: {topic}
+        Ergebnis: {score}% ({correct_answers} von {total_questions} richtig)
 
-    DEINE AUFGABE:
-    1. Overall Assessment: Ein kurzer, motivierender "Hook" (z.B. "Wow, Maschine!" oder "Kopf hoch, das wird!").
-    2. Strengths: Feier, was gut lief!
-    3. Weaknesses: Nenne Fehler "Herausforderungen" oder "Level-Up Chancen".
-    4. Encouragement: Ein Rausschmeißer-Satz, der Lust auf den nächsten Test macht.
+        DEINE AUFGABE:
+        Gib mir ein JSON-Objekt mit genau diesen Schlüsseln:
+        1. "overall_assessment": Ein kurzer, motivierender Hook.
+        2. "key_strengths": Liste mit 2-3 Stärken.
+        3. "main_weaknesses": Liste mit 1-2 Herausforderungen (nett formuliert).
+        4. "learning_recommendations": Liste von Objekten mit "priority", "area", "action", "reason".
+        5. "conceptual_understanding": Kurze Einschätzung.
+        6. "next_steps": Liste mit 2 konkreten nächsten Schritten.
+        7. "encouragement": Ein finaler Motivations-Spruch.
 
-    Antworte STRENG als JSON:
-    {{
-        "overall_assessment": "Dein motivierendes Fazit",
-        "key_strengths": ["Stärke 1", "Stärke 2"],
-        "main_weaknesses": ["Hier kannst du noch punkten 1", "Hier leveln wir noch hoch 2"], 
-        "learning_recommendations": [
-            {{
-                "priority": "hoch/mittel/niedrig",
-                "area": "Was genau?",
-                "action": "Konkreter Tipp (kurz & knackig)", 
-                "reason": "Warum hilft das?"
-            }}
-        ],
-        "conceptual_understanding": "Einschätzung (z.B. 'Grundlagen sitzen, jetzt geht's an die Details')",
-        "next_steps": ["Schritt 1", "Schritt 2"],
-        "encouragement": "Dein finaler Motivations-Spruch"
-    }}
-    """
+        Antworte NUR mit dem JSON.
+        """
+                # -----------------------
 
-            # KI-Anfrage mit kürzerem Timeout
-            print("🔄 Frage KI um Analyse...")
-            result = self.robust_api_call(test_context, max_retries=1, timeout=15, response_format="json")
-            
-            if result:
-                try:
-                    comprehensive_feedback = json.loads(result)
-                    print(f"✅ KI-Feedback erhalten für Test {test_id}")
-                    return comprehensive_feedback
-                except json.JSONDecodeError as e:
-                    print(f"❌ JSON Fehler in KI-Antwort: {e}")
-                    print(f"❌ KI-Antwort war: {result}")
-                    return self._get_fallback_feedback(score, correct_answers, total_questions, "Ungültiges JSON von KI")
-            else:
-                print(f"❌ Keine KI-Antwort erhalten - verwende Fallback")
+                print("🔄 Frage KI um Analyse...")
+                # Timeout etwas erhöht, damit die KI Zeit hat
+                result = self.robust_api_call(test_context, max_retries=1, timeout=20, response_format="json")
+                
+                if result:
+                    try:
+                        return json.loads(result)
+                    except json.JSONDecodeError:
+                        print(f"❌ JSON Fehler: {result}")
+                
+                print("❌ Keine gültige KI-Antwort")
                 return self._get_fallback_feedback(score, correct_answers, total_questions, "KI nicht verfügbar")
-                    
-        except Exception as e:
-            print(f"❌ Fehler bei KI-Feedback: {e}")
-            import traceback
-            traceback.print_exc()
-            return self._get_fallback_feedback(0, 0, 0, f"Fehler: {str(e)}")
-
+                        
+            except Exception as e:
+                print(f"❌ Fehler bei KI-Feedback: {e}")
+                return self._get_fallback_feedback(0, 0, 0, str(e))
+                
     def _get_fallback_feedback(self, score: float, correct_answers: int, total_questions: int, reason: str = "") -> dict:
         """Fallback-Feedback ohne KI"""
         feedback = {
