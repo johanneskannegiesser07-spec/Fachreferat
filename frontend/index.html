@@ -176,9 +176,12 @@
     </div>
 
     <div class="card">
-        <h2>📊 Test-Historie</h2>
-        <div id="testHistory">
-            <p>Lade Test-Historie...</p>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h2>📜 Deine letzten Tests</h2>
+            <button onclick="loadHistory()" class="secondary" style="font-size: 0.8rem;">🔄</button>
+        </div>
+        <div id="historyList">
+            <p style="color: #666;">Lade Historie...</p>
         </div>
     </div>
 
@@ -439,44 +442,60 @@
     }
 }
 
-        function displayTestHistory(history) {
-            const container = document.getElementById('testHistory');
-            
-            if (history.length === 0) {
-                container.innerHTML = '<p>Noch keine Tests durchgeführt.</p>';
-                return;
-            }
-            
-            let html = '<div class="history-list">';
-            history.forEach(test => {
-                const date = new Date(test.date).toLocaleDateString('de-DE');
-                html += `
-                    <div class="history-item">
-                        <div class="test-header">
-                            <strong>${test.subject} - ${test.topic}</strong>
-                            <span class="score ${test.score >= 80 ? 'excellent' : test.score >= 60 ? 'good' : 'poor'}">
-                                ${Math.round(test.score)}%
-                            </span>
-                        </div>
-                        <div class="test-details">
-                            <span>${date}</span>
-                            <span>${test.correct_answers}/${test.total_questions} richtig</span>
-                            <span>${Math.round(test.time_spent_seconds / 60)} Min</span>
-                        </div>
-                        <div class="test-performance">
-                            Leistung: ${test.performance_level}
-                        </div>
-                    </div>
-                `;
-            });
-            html += '</div>';
-            
-            container.innerHTML = html;
-        }
-
         // Beim Laden der Hauptseite aufrufen
         if (document.getElementById('testHistory')) {
             loadTestHistory();
+        }
+
+        // Rufe das am besten beim Laden der Seite auf (z.B. in checkAuthentication)
+        async function loadHistory() {
+            const container = document.getElementById('historyList');
+            try {
+                // Wir nutzen deinen existierenden Backend-Call
+                const result = await apiCall('/api/history');
+                
+                if (result.success && result.data && result.data.length > 0) {
+                    let html = '<div style="display: flex; flex-direction: column; gap: 10px;">';
+                    
+                    result.data.forEach(test => {
+                        // Datum schön formatieren
+                        const date = new Date(test.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit' });
+                        
+                        // Farbe je nach Score
+                        const color = test.score >= 80 ? '#28a745' : (test.score >= 50 ? '#ffc107' : '#dc3545');
+                        
+                        html += `
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 5px solid ${color}; display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div style="font-weight: bold; font-size: 1.1em;">${test.subject} <span style="font-weight: normal; color: #666;">• ${test.topic}</span></div>
+                                    <div style="font-size: 0.85em; color: #888; margin-top: 3px;">
+                                        📅 ${date} • 🎯 ${Math.round(test.score)}% • ⏱️ ${Math.round(test.time_spent_seconds/60)} min
+                                    </div>
+                                </div>
+                                <button onclick="retakeTest('${test.subject}', '${test.topic}')" class="secondary" style="padding: 5px 10px; font-size: 0.9em;">
+                                    🔄 Wiederholen
+                                </button>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<div style="text-align: center; padding: 20px; color: #888;">Noch keine Tests absolviert.<br>Leg los! 🚀</div>';
+                }
+            } catch (e) {
+                console.error(e);
+                container.innerHTML = '<p style="color: #dc3545;">Konnte Historie nicht laden.</p>';
+            }
+        }
+
+        // Funktion für den "Wiederholen"-Button
+        function retakeTest(subject, topic) {
+            // Wir speichern die Wünsche im Speicher des Browsers
+            localStorage.setItem('autoStartSubject', subject);
+            localStorage.setItem('autoStartTopic', topic);
+            // Und leiten zum Test weiter
+            window.location.href = 'test.html';
         }
     </script>
 </body>

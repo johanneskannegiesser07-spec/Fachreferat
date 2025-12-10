@@ -475,6 +475,21 @@
             setTimeout(() => {
                 initializeCheckboxEvents();
             }, 100);
+            
+            // Prüfen ob wir einen Test wiederholen sollen
+            const autoSubject = localStorage.getItem('autoStartSubject');
+            const autoTopic = localStorage.getItem('autoStartTopic');
+            
+            if (autoSubject && autoTopic) {
+                document.getElementById('testSubject').value = autoSubject;
+                document.getElementById('testTopic').value = autoTopic;
+                
+                // Speicher bereinigen (damit es nicht immer passiert)
+                localStorage.removeItem('autoStartSubject');
+                localStorage.removeItem('autoStartTopic');
+                
+                showOutput(`🔄 Wiederhole Test: ${autoSubject} - ${autoTopic}`, 'success');
+            }
         });
 
         function debugLog(message) {
