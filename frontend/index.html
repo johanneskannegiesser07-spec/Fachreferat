@@ -176,12 +176,14 @@
     </div>
 
     <div class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <h2>📜 Deine letzten Tests</h2>
-            <button onclick="retakeTest('${test.test_id}')" class="secondary" style="font-size: 0.8rem;">🔄 Wiederholen</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin-bottom: 0; border-bottom: none;">📊 Test-Historie</h2>
+            <button onclick="loadTestHistory()" style="background: #6c757d; font-size: 0.9rem; padding: 8px 15px;">
+                🔄 Aktualisieren
+            </button>
         </div>
-        <div id="historyList">
-            <p style="color: #666;">Lade Historie...</p>
+        <div id="testHistory">
+            <p>Lade Test-Historie...</p>
         </div>
     </div>
 
@@ -497,6 +499,51 @@
             
             // Weiterleitung
             window.location.href = '/test';
+        }
+
+        function displayTestHistory(history) {
+            const container = document.getElementById('testHistory');
+            
+            if (!history || history.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666;">Noch keine Tests durchgeführt.</p>';
+                return;
+            }
+            
+            let html = '<div class="history-list">';
+            history.forEach(test => {
+                const date = new Date(test.date).toLocaleDateString('de-DE', {
+                    day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit'
+                });
+                
+                // Wir übergeben die TEST-ID an die Funktion!
+                html += `
+                    <div class="history-item" style="display: flex; justify-content: space-between; align-items: center; gap: 15px;">
+                        <div style="flex-grow: 1;">
+                            <div class="test-header">
+                                <strong>${test.subject} - ${test.topic}</strong>
+                                <span class="score ${test.score >= 80 ? 'excellent' : test.score >= 60 ? 'good' : 'poor'}">
+                                    ${Math.round(test.score)}%
+                                </span>
+                            </div>
+                            <div class="test-details">
+                                <span>📅 ${date}</span>
+                                <span>✅ ${test.correct_answers}/${test.total_questions}</span>
+                                <span>⏱️ ${Math.round(test.time_spent_seconds / 60)} Min</span>
+                            </div>
+                            <div class="test-performance">
+                                Leistung: ${test.performance_level}
+                            </div>
+                        </div>
+                        
+                        <button onclick="retakeTest('${test.test_id}')" class="secondary" style="white-space: nowrap;">
+                            🔄 Wiederholen
+                        </button>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            container.innerHTML = html;
         }
     </script>
 </body>

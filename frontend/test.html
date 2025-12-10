@@ -469,6 +469,21 @@
 
         // Beim Laden Auth prüfen
         document.addEventListener('DOMContentLoaded', async function() {
+
+            debugLog('DOM vollständig geladen');
+                        await checkAuthentication();
+                        
+                        setTimeout(() => { initializeCheckboxEvents(); }, 100);
+
+                        // 1. PRÜFEN AUF RETAKE (Alten Test kopieren)
+                        const retakeId = localStorage.getItem('retakeTestId');
+                        
+                        if (retakeId) {
+                            localStorage.removeItem('retakeTestId'); // Aufräumen
+                            startRetake(retakeId); // Neue Funktion aufrufen
+                            return; // Hier stoppen, Rest ignorieren
+                        }
+
                     debugLog('DOM vollständig geladen');
                     
                     // 1. Erst Authentifizierung prüfen (wichtig!)
@@ -1435,6 +1450,52 @@
             }, 500);
             
             console.log('✅ Ergebnisse angezeigt');
+        }
+
+        async function startRetake(oldTestId) {
+            try {
+                // UI: Setup ausblenden, Ladescreen an
+                document.getElementById('testSetup').classList.add('hidden');
+                document.getElementById('testLoading').classList.remove('hidden');
+                
+                // Text im Ladescreen anpassen
+                document.getElementById('loadingSubject').textContent = "Wiederholung";
+                document.getElementById('loadingTopic').textContent = "Lade alte Fragen...";
+                document.getElementById('loadingCount').textContent = "-";
+                
+                showOutput('🔄 Lade alten Test aus der Datenbank...', 'loading');
+
+                // API Aufruf an den NEUEN Endpunkt
+                const result = await apiCall('/api/retake-test', 'POST', {
+                    test_id: oldTestId
+                });
+
+                if (result.success) {
+                    currentTest = result.data;
+                    
+                    // UI Umschalten
+                    document.getElementById('testLoading').classList.add('hidden');
+                    document.getElementById('activeTest').classList.remove('hidden');
+                    
+                    // Setup Timer & Fragen
+                    timeRemaining = currentTest.total_questions * 60;
+                    startTimer();
+                    currentQuestionIndex = 0;
+                    userAnswers = {}; 
+                    selectedOptions = new Set();
+                    
+                    // Frage 1 laden
+                    loadQuestion(0);
+                    
+                    showOutput(`✅ Wiederholung gestartet: ${currentTest.subject}`, 'success');
+                } else {
+                    throw new Error('Konnte Test nicht laden');
+                }
+            } catch (error) {
+                document.getElementById('testLoading').classList.add('hidden');
+                document.getElementById('testSetup').classList.remove('hidden');
+                showOutput('❌ Fehler beim Laden: ' + error.message, 'error');
+            }
         }
     </script>
 </body>
