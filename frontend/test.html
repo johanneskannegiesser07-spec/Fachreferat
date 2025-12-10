@@ -275,6 +275,19 @@
             margin: 10px 0;
             border-radius: 6px;
         }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .spinning {
+            animation: spin 2s linear infinite;
+            display: inline-block; /* Wichtig fürs Drehen */
+        }
     </style>
 </head>
 <body>
@@ -309,6 +322,22 @@
             </div>
         </div>
 
+        <div id="testLoading" class="card hidden" style="text-align: center; padding: 60px 20px;" class="spinning">
+            <div style="font-size: 4rem; animation: spin 1.5s infinite;">⚙️</div>
+            <h2 style="margin-top: 20px; color: #333;">Generiere Test...</h2>
+            
+            <div style="margin: 20px auto; max-width: 400px; background: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 4px solid #667eea; text-align: left;">
+                <p><strong>Fach:</strong> <span id="loadingSubject">...</span></p>
+                <p><strong>Thema:</strong> <span id="loadingTopic">...</span></p>
+                <p><strong>Umfang:</strong> <span id="loadingCount">...</span> Fragen</p>
+            </div>
+            
+            <p style="color: #666; font-style: italic; margin-top: 20px;">
+                Die KI erstellt gerade maßgeschneiderte Aufgaben für dich.<br>
+                Das dauert einen kleinen Moment...
+            </p>
+        </div>
+
         <!-- Aktiver Test -->
         <div id="activeTest" class="card hidden">
             <div class="test-header">
@@ -316,7 +345,10 @@
                     <strong id="testInfo">Fach: Lade...</strong>
                     <div id="progressText">Frage 1 von 10</div>
                 </div>
-                <div class="timer" id="timer">60:00</div>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button onclick="togglePause()" id="pauseBtn" class="secondary" style="padding: 5px 10px;">⏸️</button>
+                    <div class="timer" id="timer">60:00</div>
+                </div>
             </div>
 
             <div class="progress-bar">
@@ -433,6 +465,7 @@
         let currentQuestionIndex = 0;
         let userAnswers = {};
         let selectedOptions = new Set();
+        let isPaused = false;
 
         // Beim Laden Auth prüfen
         document.addEventListener('DOMContentLoaded', function() {
@@ -556,9 +589,18 @@
             }
 
             try {
-                showOutput('🚀 Starte Test...', 'loading');
-                document.getElementById('startTestBtn').disabled = true;
+                // 1. UI Umschalten: Setup WEG -> Ladescreen AN
+                document.getElementById('testSetup').classList.add('hidden');
+                document.getElementById('testLoading').classList.remove('hidden');
+                
+                // 2. Ladescreen mit Daten füllen
+                document.getElementById('loadingSubject').textContent = subject;
+                document.getElementById('loadingTopic').textContent = topic;
+                document.getElementById('loadingCount').textContent = questionCount;
+                
+                showOutput('🚀 Starte Test-Generierung...', 'loading');
 
+                // 3. API Aufruf (dauert ein paar Sekunden)
                 const result = await apiCall('/api/start-test', 'POST', {
                     subject: subject,
                     topic: topic,
@@ -569,27 +611,31 @@
                     currentTest = result.data;
                     debugLog('Test erfolgreich gestartet');
                     
-                    // KORREKTE Zeitinitialisierung - 60 Sekunden pro Frage
-                    timeRemaining = questionCount * 60;
-                    debugLog(`⏰ Zeitlimit gesetzt: ${timeRemaining} Sekunden (${questionCount} Fragen × 60s)`);
-                    
-                    document.getElementById('testSetup').classList.add('hidden');
+                    // 4. UI Umschalten: Ladescreen WEG -> Aktiver Test AN
+                    document.getElementById('testLoading').classList.add('hidden');
                     document.getElementById('activeTest').classList.remove('hidden');
                     
-                    startTimer();
+                    // Zeit setzen
+                    timeRemaining = questionCount * 60;
                     
+                    // Timer & Fragen starten
+                    startTimer();
                     currentQuestionIndex = 0;
-                    userAnswers = {}; // Antworten zurücksetzen
-                    selectedOptions = new Set(); // Auswahl zurücksetzen
+                    userAnswers = {}; 
+                    selectedOptions = new Set();
                     
                     loadQuestion(0);
                     
-                    showOutput(`✅ Test gestartet: ${subject} - ${topic} (${questionCount} Fragen, ${timeRemaining}s Zeit)`);
+                    showOutput(`✅ Test gestartet: ${subject} - ${topic}`);
                 } else {
-                    showOutput('❌ Test konnte nicht gestartet werden', 'error');
-                    document.getElementById('startTestBtn').disabled = false;
+                    // Fehlerfall: Zurück zum Setup
+                    throw new Error('Test konnte nicht gestartet werden');
                 }
             } catch (error) {
+                // Fehlerbehandlung: Ladescreen weg, Setup wieder her
+                document.getElementById('testLoading').classList.add('hidden');
+                document.getElementById('testSetup').classList.remove('hidden');
+                
                 document.getElementById('startTestBtn').disabled = false;
                 debugLog('Fehler beim Test-Start: ' + error.message);
                 showOutput('❌ Fehler beim Test-Start: ' + error.message, 'error');
@@ -620,25 +666,41 @@
         }
 
         function startTimer() {
-                    // Sofort einmal anzeigen, damit nicht 00:00 steht bis zum ersten Tick
+            updateTimerDisplay();
+            if (testTimer) clearInterval(testTimer);
+
+            testTimer = setInterval(() => {
+                if (!isPaused) { // Nur zählen wenn nicht pausiert
+                    timeRemaining--;
                     updateTimerDisplay();
                     
-                    // Falls aus Versehen noch ein Timer läuft: stoppen
-                    if (testTimer) clearInterval(testTimer);
-
-                    testTimer = setInterval(() => {
-                        timeRemaining--;
-                        updateTimerDisplay();
-                        
-                        // Wenn Zeit abgelaufen ist
-                        if (timeRemaining <= 0) {
-                            clearInterval(testTimer);
-                            // Optional: Nutzer warnen oder Test automatisch beenden
-                            // alert("Zeit abgelaufen!"); 
-                            finishTest(); 
-                        }
-                    }, 1000); // 1000 ms = 1 Sekunde
+                    if (timeRemaining <= 0) {
+                        clearInterval(testTimer);
+                        finishTest(); 
+                    }
                 }
+            }, 1000);
+        }
+
+        function togglePause() {
+            isPaused = !isPaused;
+            const btn = document.getElementById('pauseBtn');
+            const overlay = document.getElementById('questionText'); // Optional: Frage ausblenden
+            
+            if (isPaused) {
+                btn.textContent = "▶️ Weiter";
+                btn.classList.replace('secondary', 'success');
+                showOutput('⏸️ Test pausiert');
+                // Optional: Frage unscharf machen damit man nicht schummelt ;)
+                document.querySelector('.question-container').style.opacity = '0.3';
+                document.querySelector('.question-container').style.pointerEvents = 'none';
+            } else {
+                btn.textContent = "⏸️";
+                btn.classList.replace('success', 'secondary');
+                document.querySelector('.question-container').style.opacity = '1';
+                document.querySelector('.question-container').style.pointerEvents = 'auto';
+            }
+        }
 
         function loadQuestion(index) {
             debugLog(`Lade Frage ${index}...`);
@@ -752,6 +814,20 @@
             
             const prevBtn = document.getElementById('prevBtn');
             const nextBtn = document.getElementById('nextBtn');
+            const finishBtn = document.getElementById('finishBtn');
+
+            // "Weiter" nur anzeigen, wenn NICHT letzte Frage
+            if (index === questions.length - 1) {
+                nextBtn.classList.add('hidden'); // Ausblenden
+                finishBtn.classList.remove('secondary'); // Finish hervorheben
+                finishBtn.classList.add('success');
+            } else {
+                nextBtn.classList.remove('hidden'); // Einblenden
+                finishBtn.classList.add('secondary');
+                finishBtn.classList.remove('success');
+            }
+            
+            if (prevBtn) prevBtn.disabled = index === 0;
             
             if (prevBtn) prevBtn.disabled = index === 0;
             if (nextBtn) nextBtn.disabled = index === questions.length - 1;
@@ -1052,24 +1128,27 @@
                             <div style="display: flex; flex-direction: column; gap: 12px;">
                         `;
                         
-                        feedback.learning_recommendations.forEach(rec => {
-                            // Farbe je nach Priority
-                            let borderCol = '#6c757d'; // grau
-                            if(rec.priority === 'HIGH' || rec.priority === 'hoch') borderCol = '#dc3545'; // rot
-                            if(rec.priority === 'MEDIUM' || rec.priority === 'mittel') borderCol = '#ffc107'; // gelb
-                            if(rec.priority === 'LOW' || rec.priority === 'niedrig') borderCol = '#28a745'; // grün
+                        // NEUE VERSION (Einfügen):
+                        feedback.learning_recommendations.forEach((rec, index) => {
+                            
+                            // --- BUGFIX START ---
+                            // Wir erzwingen einen String, damit .toUpperCase() niemals abstürzt
+                            const priorityRaw = String(rec.priority || 'INFO'); 
+                            const priorityDisplay = priorityRaw.toUpperCase();
+                            const priorityColor = getPriorityColor(priorityRaw);
+                            // --- BUGFIX END ---
 
                             html += `
-                                <div class="recommendation-item" style="border-left: 5px solid ${borderCol}; background: #f8f9fa; padding: 15px; border-radius: 4px;">
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                                        <strong style="color: #333; font-size: 1.1em;">${rec.area || 'Tipp'}</strong>
-                                        <span style="background: ${borderCol}; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; font-weight: bold;">
-                                            ${(rec.priority || 'INFO').toUpperCase()}
+                                <div class="recommendation-item" style="border-left: 4px solid ${priorityColor};">
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                                        <strong style="color: #333; font-size: 1.1em;">${rec.area || 'Allgemein'}</strong>
+                                        <span style="background: ${priorityColor}; color: white; padding: 3px 10px; border-radius: 12px; font-size: 0.8em; font-weight: bold;">
+                                            ${priorityDisplay}
                                         </span>
                                     </div>
-                                    <p style="margin: 5px 0; color: #333; font-weight: 500;">👉 ${rec.action || ''}</p>
+                                    <p style="margin: 8px 0 5px 0; color: #333;">${rec.action || ''}</p>
                                     <small style="color: #666; display: block; margin-top: 5px;">
-                                        <em>💡 Warum? ${rec.reason || ''}</em>
+                                        <em>${rec.reason || ''}</em>
                                     </small>
                                 </div>
                             `;
@@ -1104,21 +1183,15 @@
                 }
 
         function getPriorityColor(priority) {
-            switch(priority) {
-                case 'hoch': return '#dc3545';
-                case 'mittel': return '#ffc107';
-                case 'niedrig': return '#28a745';
-                default: return '#6c757d';
-            }
-        }
-        function getPriorityColor(priority) {
-            switch(priority) {
-                case 'hoch': return '#dc3545';
-                case 'mittel': return '#ffc107';
-                case 'niedrig': return '#28a745';
-                default: return '#6c757d';
-            }
-        }
+                    // Sicherstellen, dass wir Text haben und Kleinschreibung nutzen
+                    const p = String(priority || '').toLowerCase();
+                    
+                    if (p.includes('hoch') || p.includes('high')) return '#dc3545';   // Rot
+                    if (p.includes('mittel') || p.includes('medium')) return '#ffc107'; // Gelb
+                    if (p.includes('niedrig') || p.includes('low')) return '#28a745';  // Grün
+                    
+                    return '#6c757d'; // Grau (Fallback)
+                }
 
         function getPerformanceClass(score) {
             if (score >= 90) return 'excellent';
