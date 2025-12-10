@@ -178,7 +178,7 @@
     <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <h2>📜 Deine letzten Tests</h2>
-            <button onclick="loadHistory()" class="secondary" style="font-size: 0.8rem;">🔄</button>
+            <button onclick="retakeTest('${test.test_id}')" class="secondary" style="font-size: 0.8rem;">🔄 Wiederholen</button>
         </div>
         <div id="historyList">
             <p style="color: #666;">Lade Historie...</p>
@@ -452,7 +452,7 @@
             const container = document.getElementById('historyList');
             try {
                 // Wir nutzen deinen existierenden Backend-Call
-                const result = await apiCall('/api/history');
+                const result = await apiCall('/api/test-history');
                 
                 if (result.success && result.data && result.data.length > 0) {
                     let html = '<div style="display: flex; flex-direction: column; gap: 10px;">';
@@ -490,12 +490,13 @@
         }
 
         // Funktion für den "Wiederholen"-Button
-        function retakeTest(subject, topic) {
-            // Wir speichern die Wünsche im Speicher des Browsers
-            localStorage.setItem('autoStartSubject', subject);
-            localStorage.setItem('autoStartTopic', topic);
-            // Und leiten zum Test weiter
-            window.location.href = 'test.html';
+        // Funktion für den "Wiederholen"-Button
+        function retakeTest(testId) {
+            // Wir speichern die ID des alten Tests
+            localStorage.setItem('retakeTestId', testId);
+            
+            // Weiterleitung
+            window.location.href = '/test';
         }
     </script>
 </body>

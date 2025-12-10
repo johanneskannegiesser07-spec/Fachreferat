@@ -3040,6 +3040,72 @@ Lernempfehlungen:
         except Exception as e:
             print(f"❌ Debug-Fehler: {e}")
 
+    def retake_test_session(self, username: str, original_test_id: str) -> dict:
+            """
+            🔄 Erstellt eine neue Test-Session basierend auf einem ALTEN Test (exakt gleiche Fragen)
+            """
+            user_hash = self._get_user_hash(username)
+            # Neue ID erstellen
+            new_test_id = f"test_{int(time.time())}_{user_hash}"
+            
+            try:
+                conn = sqlite3.connect(self.db_path, timeout=20.0)
+                cursor = conn.cursor()
+                
+                # 1. Hole die ALTEN Fragen aus der Datenbank
+                cursor.execute('''
+                    SELECT subject, topic, questions, total_questions 
+                    FROM test_sessions WHERE test_id = ? AND user_hash = ?
+                ''', (original_test_id, user_hash))
+                
+                data = cursor.fetchone()
+                if not data:
+                    conn.close()
+                    print(f"❌ Ursprungs-Test {original_test_id} nicht gefunden")
+                    return {"error": "Ursprungstest nicht gefunden"}
+                    
+                subject, topic, questions_json, total_questions = data
+                
+                print(f"🔄 Kopiere Test {original_test_id} -> {new_test_id}")
+                
+                # 2. Erstelle NEUE Session, aber mit den ALTEN Fragen
+                start_time_iso = datetime.utcnow().isoformat()
+                
+                cursor.execute('''
+                    INSERT INTO test_sessions 
+                    (test_id, user_hash, subject, topic, questions, total_questions, start_time)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    new_test_id,
+                    user_hash,
+                    subject,
+                    topic,
+                    questions_json, # Wir nutzen exakt das gleiche JSON!
+                    total_questions,
+                    start_time_iso
+                ))
+                
+                conn.commit()
+                conn.close()
+                
+                # Daten für Frontend vorbereiten
+                exercises_result = json.loads(questions_json)
+                
+                return {
+                    "test_id": new_test_id,
+                    "subject": subject,
+                    "topic": topic,
+                    "exercises": exercises_result,
+                    "total_questions": total_questions,
+                    "time_limit": 60 * total_questions,
+                    "start_time": start_time_iso,
+                    "is_retake": True
+                }
+                
+            except Exception as e:
+                print(f"❌ Fehler bei Test-Wiederholung: {e}")
+                return {"error": str(e)}
+
 
 
 

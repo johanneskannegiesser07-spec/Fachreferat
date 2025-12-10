@@ -468,29 +468,45 @@
         let isPaused = false;
 
         // Beim Laden Auth prüfen
-        document.addEventListener('DOMContentLoaded', function() {
-            debugLog('DOM vollständig geladen');
-            checkAuthentication();
-            
-            setTimeout(() => {
-                initializeCheckboxEvents();
-            }, 100);
-            
-            // Prüfen ob wir einen Test wiederholen sollen
-            const autoSubject = localStorage.getItem('autoStartSubject');
-            const autoTopic = localStorage.getItem('autoStartTopic');
-            
-            if (autoSubject && autoTopic) {
-                document.getElementById('testSubject').value = autoSubject;
-                document.getElementById('testTopic').value = autoTopic;
-                
-                // Speicher bereinigen (damit es nicht immer passiert)
-                localStorage.removeItem('autoStartSubject');
-                localStorage.removeItem('autoStartTopic');
-                
-                showOutput(`🔄 Wiederhole Test: ${autoSubject} - ${autoTopic}`, 'success');
-            }
-        });
+        document.addEventListener('DOMContentLoaded', async function() {
+                    debugLog('DOM vollständig geladen');
+                    
+                    // 1. Erst Authentifizierung prüfen (wichtig!)
+                    await checkAuthentication();
+                    
+                    setTimeout(() => {
+                        initializeCheckboxEvents();
+                    }, 100);
+
+                    // 2. PRÜFEN AUF AUTO-START (Vom Dashboard)
+                    const autoSubject = localStorage.getItem('autoStartSubject');
+                    const autoTopic = localStorage.getItem('autoStartTopic');
+                    
+                    if (autoSubject && autoTopic) {
+                        console.log(`🔄 Auto-Start erkannt: ${autoSubject} - ${autoTopic}`);
+                        
+                        // Werte in die Eingabefelder füllen
+                        const subjectInput = document.getElementById('testSubject');
+                        const topicInput = document.getElementById('testTopic');
+                        
+                        if (subjectInput && topicInput) {
+                            subjectInput.value = autoSubject;
+                            topicInput.value = autoTopic;
+                            
+                            // Speicher bereinigen (damit er nicht bei jedem Neuladen startet)
+                            localStorage.removeItem('autoStartSubject');
+                            localStorage.removeItem('autoStartTopic');
+                            
+                            showOutput(`🔄 Starte Wiederholung: ${autoSubject}`, 'loading');
+                            
+                            // 3. TEST AUTOMATISCH STARTEN
+                            // Kurze Pause, damit die UI bereit ist
+                            setTimeout(() => {
+                                startTest();
+                            }, 500);
+                        }
+                    }
+                });
 
         function debugLog(message) {
             if (!debugEnabled) return;

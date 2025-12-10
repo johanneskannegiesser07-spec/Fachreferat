@@ -97,6 +97,9 @@ class UserProfileUpdate(BaseModel):
     school_type: Optional[str] = None
     state: Optional[str] = None
 
+class RetakeRequest(BaseModel):
+    test_id: str
+
 # === AUTHENTIFIZIERUNG ===
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -530,6 +533,22 @@ async def debug_test(test_id: str):
             
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+@app.post("/api/retake-test")
+async def retake_test(
+    request: RetakeRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """🔄 Startet einen alten Test neu (gleiche Fragen)"""
+    if not buddy:
+        raise HTTPException(status_code=500, detail="Lern-Buddy nicht geladen")
+    
+    result = buddy.retake_test_session(current_user['sub'], request.test_id)
+    
+    if "error" in result:
+         raise HTTPException(status_code=404, detail=result["error"])
+         
+    return {"success": True, "data": result}
 
 # === START-SKRIPT ===
 
