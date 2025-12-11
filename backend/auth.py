@@ -9,11 +9,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Konfiguration
-SECRET_KEY = os.getenv("SECRET_KEY", "dein-sehr-geheimer-schluessel-bitte-aendern")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+# SECRET_KEY = os.getenv("SECRET_KEY", "lern-buddy-secret-key-change-in-production")
+# ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 Tage
 
 # Password Hashing Konfiguration (bcrypt)
+# Wir nutzen bcrypt, weil es der Industriestandard ist
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def verify_password(plain_password, hashed_password):
@@ -21,8 +22,11 @@ def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password):
-    """Sicheres Hashing mit bcrypt (automatische Salts)"""
-    # WICHTIG: Kein SECRET_KEY anhängen, bcrypt macht das selbst!
+    """
+    Sicheres Hashing mit bcrypt.
+    WICHTIG: Wir hängen KEINEN Secret-Key mehr an, 
+    da bcrypt das Passwort sonst ablehnt (>72 Bytes) und selbst salzt.
+    """
     return pwd_context.hash(password)
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
