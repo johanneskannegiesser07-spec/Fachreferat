@@ -292,9 +292,13 @@ class UniversalLernBuddy:
             if is_correct: correct_count += 1
             
             detailed.append({
-                "question_index": i, "question": q.get('question'), 
-                "user_answers": u_list, "correct_answers": c_list,
-                "is_correct": is_correct, "explanation": q.get('explanation', '')
+                "question_index": i, 
+                "question": q.get('question'), 
+                "user_answers": u_list, 
+                "correct_answers": c_list,
+                "is_correct": is_correct, 
+                "explanation": q.get('explanation', ''),
+                "options": q.get('options', {})  # <--- DIESE ZEILE HAT GEFEHLT!
             })
 
         score = (correct_count / total) * 100 if total else 0
