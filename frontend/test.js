@@ -344,22 +344,77 @@ function getPriorityColor(priority) {
 }
 
 function renderDetailedAnswers(details) {
-    return (details||[]).map((d, i) => `
-        <div class="question-result ${d.is_correct ? 'correct' : 'incorrect'}">
-            <div style="display:flex; justify-content:space-between;">
-                <h4>Frage ${i+1}</h4>
-                <span>${d.is_correct ? '✅ Richtig' : '❌ Falsch'}</span>
-            </div>
-            <p style="font-size: 1.1em; font-weight: 500; margin: 10px 0;">${d.question}</p>
+    return (details||[]).map((d, i) => {
+        // Wir bauen die Optionen visuell nach
+        let optionsHtml = '';
+        
+        if (d.options && Object.keys(d.options).length > 0) {
+            optionsHtml = '<div style="display: flex; flex-direction: column; gap: 8px; margin: 15px 0;">';
             
-            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 10px 0;">
-                <div style="margin-bottom: 5px;">Deine Antwort: <strong style="${d.is_correct ? 'color:green' : 'color:red'}">${d.user_answers.join(', ')}</strong></div>
-                <div>Lösung: <strong style="color:green">${d.correct_answers.join(', ')}</strong></div>
+            Object.entries(d.options).forEach(([key, text]) => {
+                const isSelected = d.user_answers.includes(key);
+                const isCorrect = d.correct_answers.includes(key);
+                
+                // Styling-Logik
+                let style = 'padding: 12px; border-radius: 8px; border: 1px solid #eee; display: flex; align-items: center; justify-content: space-between;';
+                let icon = '';
+                let badge = '';
+
+                if (isCorrect) {
+                    // Richtig: Grün
+                    style += 'background-color: #d4edda; border-color: #c3e6cb; color: #155724;';
+                    icon = '✅';
+                } else if (isSelected && !isCorrect) {
+                    // Falsch gewählt: Rot
+                    style += 'background-color: #f8d7da; border-color: #f5c6cb; color: #721c24;';
+                    icon = '❌';
+                } else {
+                    // Neutral
+                    style += 'background-color: #f8f9fa; color: #555;';
+                }
+
+                if (isSelected) {
+                    style += ' border-width: 2px; font-weight: 500;';
+                    badge = '<span style="font-size: 0.75em; background: rgba(0,0,0,0.1); padding: 2px 8px; border-radius: 12px; margin-left: 10px; text-transform: uppercase; font-weight: bold;">Deine Wahl</span>';
+                }
+
+                optionsHtml += `
+                    <div style="${style}">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-weight: bold; min-width: 25px;">${key})</span>
+                            <span>${text}</span>
+                        </div>
+                        <div style="display: flex; align-items: center;">
+                            ${badge}
+                            <span style="margin-left: 10px;">${icon}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            optionsHtml += '</div>';
+        }
+
+        // Das Karten-Layout
+        return `
+        <div class="question-result ${d.is_correct ? 'correct' : 'incorrect'}" style="background: white; border: 1px solid #e0e0e0; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 6px solid ${d.is_correct ? '#28a745' : '#dc3545'};">
+            
+            <div style="display:flex; justify-content:space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #f0f0f0; padding-bottom: 15px;">
+                <h4 style="margin: 0; color: #333; font-size: 1.1em;">Frage ${i+1}</h4>
+                <span style="font-weight: bold; color: ${d.is_correct ? '#155724' : '#721c24'}; background: ${d.is_correct ? '#d4edda' : '#f8d7da'}; padding: 6px 15px; border-radius: 20px; font-size: 0.9em;">
+                    ${d.is_correct ? '✅ Richtig gelöst' : '❌ Leider falsch'}
+                </span>
             </div>
             
-            <p style="margin-top:10px; font-style:italic; color:#555;">💡 ${d.explanation}</p>
+            <p style="font-size: 1.2em; font-weight: 600; margin-bottom: 20px; line-height: 1.5; color: #2d3748;">${d.question}</p>
+            
+            ${optionsHtml}
+            
+            <div style="margin-top: 20px; padding: 15px; background: #eef2f7; border-radius: 8px; border-left: 4px solid #667eea;">
+                <strong style="color: #667eea; display: block; margin-bottom: 5px;">💡 Erklärung / Hinweis:</strong>
+                <p style="margin: 0; color: #4a5568; font-style: italic;">${d.explanation}</p>
+            </div>
         </div>
-    `).join('');
+    `}).join('');
 }
 
 function getPerformanceClass(score) {
