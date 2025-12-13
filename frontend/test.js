@@ -234,45 +234,57 @@ async function finishTest() {
 function renderResults(data) {
     const container = document.getElementById('testResult');
     
-    // Wir bauen ein sauberes Grid-Layout
+    // Wir bauen das HTML explizit in der richtigen Reihenfolge auf
     let html = `
-        <div class="result-content" style="max-width: 800px; margin: 0 auto;">
-            <h2 style="text-align: center; margin-bottom: 30px;">📊 Dein Testergebnis</h2>
+        <div class="result-content" style="max-width: 800px; margin: 0 auto; padding: 20px;">
             
-            <div style="display: flex; justify-content: center; align-items: center; gap: 40px; margin-bottom: 40px;">
-                <div class="score-circle">
-                    ${Math.round(data.score)}%
-                </div>
-                <div style="text-align: left;">
-                    <div class="performance-badge ${getPerformanceClass(data.score)}" style="font-size: 1.2rem; padding: 8px 20px; margin-bottom: 10px;">
-                        ${data.performance_level}
+            <div style="text-align: center; margin-bottom: 40px; border-bottom: 1px solid #eee; padding-bottom: 20px;">
+                <h2 style="margin-bottom: 20px; color: #333;">📊 Dein Testergebnis</h2>
+                
+                <div style="display: flex; justify-content: center; align-items: center; gap: 30px; flex-wrap: wrap;">
+                    <div class="score-circle">
+                        ${Math.round(data.score)}%
                     </div>
-                    <div style="font-size: 1.1rem; color: #555;">
-                        ✅ <strong>${data.correct_answers}</strong> / ${data.total_questions} Richtig<br>
-                        ⏱️ Zeit: ${Math.round(data.time_spent_seconds / 60)} min
+                    
+                    <div style="text-align: left;">
+                        <div class="performance-badge ${getPerformanceClass(data.score)}" style="font-size: 1.2rem; margin-bottom: 10px; display: inline-block;">
+                            ${data.performance_level}
+                        </div>
+                        <div style="font-size: 1.1rem; color: #555; line-height: 1.6;">
+                            ✅ <strong>${data.correct_answers}</strong> von ${data.total_questions} Richtig<br>
+                            ⏱️ Zeit: ${Math.round(data.time_spent_seconds / 60)} min
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="feedback-container" style="margin-bottom: 40px;">
-                ${renderAiFeedback(data.comprehensive_feedback)}
+            <div class="feedback-section" style="margin-bottom: 40px; background: #f8f9fa; border-radius: 12px; padding: 5px;">
+                <h3 style="margin: 15px 0 15px 20px;">🚀 Coach-Feedback</h3>
+                <div class="feedback-container">
+                    ${renderAiFeedback(data.comprehensive_feedback)}
+                </div>
             </div>
 
-            <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;">
-
-            <div class="results-container">
-                <h3 style="margin-bottom: 20px;">📋 Detaillierte Auswertung</h3>
-                ${renderDetailedAnswers(data.detailed_answers)}
+            <div class="details-section" style="margin-bottom: 40px;">
+                <h3 style="margin-bottom: 20px; border-left: 5px solid #667eea; padding-left: 10px;">📋 Detaillierte Auswertung</h3>
+                <div class="results-list" style="display: flex; flex-direction: column; gap: 15px;">
+                    ${renderDetailedAnswers(data.detailed_answers)}
+                </div>
             </div>
 
-            <div style="display: flex; gap: 15px; justify-content: center; margin-top: 40px; padding-bottom: 20px;">
+            <div style="display: flex; gap: 15px; justify-content: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee;">
                 <button onclick="window.location.reload()" class="success">🔄 Test wiederholen</button>
-                <button onclick="window.location.href='index.html'" class="secondary">🏠 Zum Dashboard</button>
+                <button onclick="goToDashboard()" class="secondary">🏠 Zum Dashboard</button>
             </div>
         </div>
     `;
+    
     container.innerHTML = html;
+    
+    // Scrollen nach oben, damit man das Ergebnis sieht
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+
 
 function renderAiFeedback(fb) {
     if(!fb) return '<p>Kein Feedback verfügbar.</p>';
@@ -317,4 +329,9 @@ function getPerformanceClass(score) {
     if(score >= 75) return 'good';
     if(score >= 60) return 'average';
     return 'poor';
+}
+
+// Hilfsfunktion für den statischen Button in test.html
+function goToDashboard() {
+    window.location.href = '/';
 }
