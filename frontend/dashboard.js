@@ -1,0 +1,93 @@
+// frontend/dashboard.js - Logik für das Dashboard
+document.addEventListener('DOMContentLoaded', async function() {
+    await checkAuthentication();
+    loadSchoolContext();
+    loadTestHistory(); // Historie laden beim Start
+});
+
+async function loadSchoolContext() {
+    try {
+        const result = await apiCall('/api/school-context');
+        const schoolInfo = document.getElementById('schoolInfo');
+        
+        if (result.data && result.data.school_type) {
+            schoolInfo.innerHTML = `
+                <div style="font-size: 1.1em;">🏫 <strong>${result.data.school_type}</strong></div>
+                <div>Klasse ${result.data.grade} • ${result.data.state}</div>
+                <div style="color: #666; font-size: 0.9em; margin-top:5px;">Fokus: ${result.data.curriculum_focus}</div>
+            `;
+        } else {
+            schoolInfo.innerHTML = `
+                <p>Noch keine Schule konfiguriert.</p>
+                <button class="school" onclick="window.location.href='/school-setup'" style="margin-top:5px;">Jetzt einrichten</button>
+            `;
+        }
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+async function generateExercises() {
+    // Einfache Demo-Funktion für das Dashboard
+    const subject = document.getElementById('subject').value;
+    const topic = document.getElementById('topic').value;
+    
+    if(!subject || !topic) return showOutput("Bitte Fach und Thema wählen", "error-msg");
+
+    try {
+        const result = await apiCall('/api/generate-exercises', 'POST', {
+            subject, topic, count: 2
+        });
+        
+        if (result.data && result.data.exercises) {
+            let html = `<h3>✅ Generierte Vorschau:</h3>`;
+            result.data.exercises.forEach((ex, i) => {
+                html += `<div class="exercise"><p><strong>${i+1}. ${ex.question}</strong></p></div>`;
+            });
+            showOutput(html);
+        }
+    } catch(e) { /* Error handled in apiCall */ }
+}
+
+async function loadTestHistory() {
+    const container = document.getElementById('testHistory');
+    if (!container) return;
+    
+    try {
+        const result = await apiCall('/api/test-history');
+        if (result.success && result.data.length > 0) {
+            let html = '<div style="display: flex; flex-direction: column; gap: 10px;">';
+            result.data.forEach(test => {
+                const date = new Date(test.date).toLocaleDateString('de-DE');
+                const color = test.score >= 80 ? '#28a745' : (test.score >= 50 ? '#ffc107' : '#dc3545');
+                
+                html += `
+                    <div class="history-item" style="border-left-color: ${color};">
+                        <div>
+                            <strong>${test.subject}</strong>: ${test.topic}
+                            <div style="font-size: 0.85em; color: #666;">
+                                📅 ${date} • 🎯 ${Math.round(test.score)}%
+                            </div>
+                        </div>
+                        <button onclick="retakeTest('${test.test_id}')" class="secondary" style="padding: 5px 10px; font-size: 0.8em;">
+                            🔄 Wiederholen
+                        </button>
+                    </div>`;
+            });
+            container.innerHTML = html + '</div>';
+        } else {
+            container.innerHTML = '<p style="text-align:center; color:#888;">Noch keine Tests absolviert.</p>';
+        }
+    } catch (e) {
+        container.innerHTML = '<p class="error-msg">Fehler beim Laden der Historie.</p>';
+    }
+}
+
+function retakeTest(testId) {
+    localStorage.setItem('retakeTestId', testId);
+    window.location.href = '/test';
+}
+
+function showAnalytics() { showOutput("Analytics Feature kommt bald! (Daten werden bereits gesammelt)", "success-msg"); }
+function showProfile() { showOutput("Profil-Analyse läuft im Hintergrund.", "success-msg"); }
+function showRecommendations() { showOutput("Basierend auf deinen 0 Tests: Mehr Mathe üben! 😉", "success-msg"); }

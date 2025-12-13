@@ -131,7 +131,9 @@ class UniversalLernBuddy:
             "exercises": exercises_result,
             "total_questions": count,
             "time_limit": 60 * count,
-            "start_time": start_time
+            "start_time": start_time,
+            "subject": subject,
+            "topic": topic
         }
 
     def retake_test_session(self, username, old_test_id):
