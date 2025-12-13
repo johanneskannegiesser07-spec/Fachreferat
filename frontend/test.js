@@ -1,4 +1,4 @@
-// frontend/test.js - Logik für den Test-Modus
+// frontend/test.js - Logik für den Test-Modus (Mit vollständigem Feedback-Design)
 let currentTest = null;
 let testTimer = null;
 let timeRemaining = 0;
@@ -23,14 +23,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     const autoTopic = localStorage.getItem('autoStartTopic');
     
     if (autoSubject && autoTopic) {
-        document.getElementById('testSubject').value = autoSubject;
-        document.getElementById('testTopic').value = autoTopic;
+        const subjInput = document.getElementById('testSubject');
+        const topicInput = document.getElementById('testTopic');
+        if(subjInput) subjInput.value = autoSubject;
+        if(topicInput) topicInput.value = autoTopic;
+        
         localStorage.removeItem('autoStartSubject');
         localStorage.removeItem('autoStartTopic');
         setTimeout(startTest, 500);
     }
     
-    // Event Listener für Checkboxen initialisieren (delegiert)
+    // Event Listener für Checkboxen
     document.addEventListener('change', function(e) {
         if(e.target.matches('.mc-option input[type="checkbox"]')) {
             handleOptionChange(e.target);
@@ -45,7 +48,6 @@ async function startTest() {
 
     if (!subject || !topic) return showOutput("Bitte Fach/Thema wählen", "error-msg");
 
-    // UI Reset
     document.getElementById('testSetup').classList.add('hidden');
     document.getElementById('testLoading').classList.remove('hidden');
     document.getElementById('loadingSubject').textContent = subject;
@@ -76,7 +78,7 @@ async function startRetake(testId) {
         const result = await apiCall('/api/retake-test', 'POST', { test_id: testId });
         if (result.success) setupTestUI(result.data);
     } catch (e) {
-        window.location.href = '/test'; // Bei Fehler zurück zum Setup
+        window.location.href = '/test'; 
     }
 }
 
@@ -95,7 +97,6 @@ function setupTestUI(testData) {
 }
 
 function loadQuestion(index) {
-    // Sicheres Laden der Fragen-Liste
     let questions = [];
     if(currentTest.exercises.exercises) questions = currentTest.exercises.exercises;
     else if(Array.isArray(currentTest.exercises)) questions = currentTest.exercises;
@@ -103,18 +104,19 @@ function loadQuestion(index) {
     const question = questions[index];
     if(!question) return;
 
-    // UI Update
-    document.getElementById('questionNumber').textContent = `Frage ${index + 1} von ${questions.length}`;
+    // Header Updates
+    const qNumDisplay = document.getElementById('questionNumber');
+    if(qNumDisplay) qNumDisplay.textContent = `Frage ${index + 1} von ${currentTest.total_questions}`;
+
     document.getElementById('questionText').textContent = question.question;
-    document.getElementById('testInfo').textContent = `${currentTest.subject} - ${currentTest.topic}`;
+    document.getElementById('testInfo').textContent = `${currentTest.subject || 'Test'} - ${currentTest.topic || ''}`;
     
-    // Optionen rendern
     const optionsContainer = document.getElementById('mcOptions');
-    optionsContainer.innerHTML = ''; // Reset
+    optionsContainer.innerHTML = ''; 
     
     Object.entries(question.options || {}).forEach(([key, text]) => {
         const isSelected = (userAnswers[index] || []).includes(key);
-        if(isSelected) selectedOptions.add(key); // State sync
+        if(isSelected) selectedOptions.add(key); 
         
         optionsContainer.innerHTML += `
             <div class="mc-option ${isSelected ? 'selected' : ''}" onclick="toggleOption('${key}')">
@@ -124,11 +126,9 @@ function loadQuestion(index) {
         `;
     });
 
-    // Fortschrittsbalken
     const progress = ((index + 1) / questions.length) * 100;
     document.getElementById('progressFill').style.width = `${progress}%`;
 
-    // Buttons
     document.getElementById('prevBtn').disabled = (index === 0);
     const isLast = (index === questions.length - 1);
     document.getElementById('nextBtn').classList.toggle('hidden', isLast);
@@ -142,7 +142,6 @@ function toggleOption(key) {
     if(checkbox) {
         checkbox.checked = !checkbox.checked;
         handleOptionChange(checkbox);
-        // Visuelles Update erzwingen
         const div = checkbox.closest('.mc-option');
         div.classList.toggle('selected', checkbox.checked);
     }
@@ -169,8 +168,6 @@ async function previousQuestion() {
 async function saveCurrentAnswer() {
     const answer = Array.from(selectedOptions);
     userAnswers[currentQuestionIndex] = answer;
-    
-    // Background Save
     apiCall('/api/save-answer', 'POST', {
         test_id: currentTest.test_id,
         question_index: currentQuestionIndex,
@@ -201,7 +198,8 @@ function startTimer() {
             timeRemaining--;
             const min = Math.floor(timeRemaining/60).toString().padStart(2,'0');
             const sec = (timeRemaining%60).toString().padStart(2,'0');
-            document.getElementById('timer').textContent = `${min}:${sec}`;
+            const timerEl = document.getElementById('timer');
+            if(timerEl) timerEl.textContent = `${min}:${sec}`;
             if(timeRemaining <= 0) finishTest();
         }
     }, 1000);
@@ -211,12 +209,13 @@ async function finishTest() {
     await saveCurrentAnswer();
     clearInterval(testTimer);
     
-    // UI sofort umschalten
     document.getElementById('activeTest').classList.add('hidden');
     const resultDiv = document.getElementById('testResult');
     resultDiv.classList.remove('hidden');
+    
+    // Lade-Animation
     resultDiv.innerHTML = `
-        <div class="result-content" style="padding:50px;">
+        <div class="result-content" style="padding:50px; text-align:center;">
             <div class="spinning" style="font-size:3rem">🧠</div>
             <h2>KI wertet aus...</h2>
             <p>Der Coach analysiert deine Leistung.</p>
@@ -231,10 +230,11 @@ async function finishTest() {
     }
 }
 
+// === HIER IST DIE KORRIGIERTE DARSTELLUNG ===
+
 function renderResults(data) {
     const container = document.getElementById('testResult');
     
-    // Wir bauen das HTML explizit in der richtigen Reihenfolge auf
     let html = `
         <div class="result-content" style="max-width: 800px; margin: 0 auto; padding: 20px;">
             
@@ -245,7 +245,6 @@ function renderResults(data) {
                     <div class="score-circle">
                         ${Math.round(data.score)}%
                     </div>
-                    
                     <div style="text-align: left;">
                         <div class="performance-badge ${getPerformanceClass(data.score)}" style="font-size: 1.2rem; margin-bottom: 10px; display: inline-block;">
                             ${data.performance_level}
@@ -259,7 +258,6 @@ function renderResults(data) {
             </div>
 
             <div class="feedback-section" style="margin-bottom: 40px; background: #f8f9fa; border-radius: 12px; padding: 5px;">
-                <h3 style="margin: 15px 0 15px 20px;">🚀 Coach-Feedback</h3>
                 <div class="feedback-container">
                     ${renderAiFeedback(data.comprehensive_feedback)}
                 </div>
@@ -278,48 +276,88 @@ function renderResults(data) {
             </div>
         </div>
     `;
-    
     container.innerHTML = html;
-    
-    // Scrollen nach oben, damit man das Ergebnis sieht
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-
+// === DIESE FUNKTION WAR VEREINFACHT, JETZT WIEDER VOLLSTÄNDIG ===
 function renderAiFeedback(fb) {
     if(!fb) return '<p>Kein Feedback verfügbar.</p>';
     
-    return `
-        <div style="background:#f0f4ff; padding:20px; border-radius:10px; border-left:5px solid #667eea; text-align:left;">
-            <h3 style="margin-top:0;">🚀 Coach-Feedback</h3>
-            <p style="font-size:1.1em; font-weight:bold;">${fb.overall_assessment}</p>
-            
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin:15px 0;">
-                <div style="background:#d4edda; padding:10px; border-radius:5px;">
-                    <strong>💪 Stärken:</strong>
-                    <ul>${(fb.key_strengths||[]).map(s=>`<li>${s}</li>`).join('')}</ul>
+    // Lernempfehlungen rendern (Boxen)
+    let recommendationsHtml = '';
+    if(fb.learning_recommendations && fb.learning_recommendations.length > 0) {
+        recommendationsHtml = `
+            <div style="margin-top: 20px;">
+                <h4 style="margin-bottom: 10px;">💡 Konkrete Tipps:</h4>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    ${fb.learning_recommendations.map(rec => `
+                        <div style="background: white; padding: 12px; border-radius: 8px; border-left: 5px solid ${getPriorityColor(rec.priority)}; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                <strong style="color: #333;">${rec.area || 'Tipp'}</strong>
+                                <span style="font-size: 0.8em; background: #eee; padding: 2px 8px; border-radius: 10px; font-weight: bold; color: #555;">${(rec.priority||'').toUpperCase()}</span>
+                            </div>
+                            <div style="color: #333; margin-bottom: 5px;">👉 ${rec.action}</div>
+                            <div style="font-size: 0.9em; color: #666; font-style: italic;">Warum? ${rec.reason}</div>
+                        </div>
+                    `).join('')}
                 </div>
-                <div style="background:#fff3cd; padding:10px; border-radius:5px;">
-                    <strong>🚧 Fokus:</strong>
-                    <ul>${(fb.main_weaknesses||[]).map(w=>`<li>${w}</li>`).join('')}</ul>
+            </div>
+        `;
+    }
+
+    return `
+        <div style="background:#f0f4ff; padding:25px; border-radius:10px; border-left:5px solid #667eea; text-align:left; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+            <h3 style="margin-top:0; color: #667eea;">🚀 Coach-Feedback</h3>
+            <p style="font-size:1.2em; font-weight:bold; color: #333; margin-bottom: 20px;">${fb.overall_assessment}</p>
+            
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom: 20px;">
+                <div style="background:#d4edda; padding:15px; border-radius:8px;">
+                    <strong style="color: #155724; display:block; margin-bottom:10px;">💪 Deine Stärken</strong>
+                    <ul style="margin: 0; padding-left: 20px; color: #155724;">${(fb.key_strengths||[]).map(s=>`<li>${s}</li>`).join('')}</ul>
+                </div>
+                <div style="background:#fff3cd; padding:15px; border-radius:8px;">
+                    <strong style="color: #856404; display:block; margin-bottom:10px;">🚧 Hier kannst du punkten</strong>
+                    <ul style="margin: 0; padding-left: 20px; color: #856404;">${(fb.main_weaknesses||[]).map(w=>`<li>${w}</li>`).join('')}</ul>
                 </div>
             </div>
             
-            <p><em>"${fb.encouragement}"</em></p>
+            ${recommendationsHtml}
+
+            <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #dce4f2; color: #555;">
+                <strong>🎓 Verständnis:</strong> ${fb.conceptual_understanding || 'Wird analysiert...'}
+            </div>
+            
+            <p style="margin-top: 25px; font-size: 1.1em; text-align: center; font-weight: bold; color: #667eea; font-style: italic;">
+                "${fb.encouragement}"
+            </p>
         </div>
     `;
+}
+
+function getPriorityColor(priority) {
+    if(!priority) return '#ccc';
+    const p = priority.toLowerCase();
+    if(p.includes('hoch')) return '#dc3545'; // Rot
+    if(p.includes('mittel')) return '#ffc107'; // Gelb
+    return '#28a745'; // Grün
 }
 
 function renderDetailedAnswers(details) {
     return (details||[]).map((d, i) => `
         <div class="question-result ${d.is_correct ? 'correct' : 'incorrect'}">
-            <h4>Frage ${i+1} ${d.is_correct ? '✅' : '❌'}</h4>
-            <p>${d.question}</p>
-            <div style="font-size:0.9em; color:#666;">
-                <p>Deine Antwort: <strong>${d.user_answers.join(', ')}</strong></p>
-                <p>Richtig: <strong>${d.correct_answers.join(', ')}</strong></p>
+            <div style="display:flex; justify-content:space-between;">
+                <h4>Frage ${i+1}</h4>
+                <span>${d.is_correct ? '✅ Richtig' : '❌ Falsch'}</span>
             </div>
-            <p style="margin-top:10px; font-style:italic;">💡 ${d.explanation}</p>
+            <p style="font-size: 1.1em; font-weight: 500; margin: 10px 0;">${d.question}</p>
+            
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                <div style="margin-bottom: 5px;">Deine Antwort: <strong style="${d.is_correct ? 'color:green' : 'color:red'}">${d.user_answers.join(', ')}</strong></div>
+                <div>Lösung: <strong style="color:green">${d.correct_answers.join(', ')}</strong></div>
+            </div>
+            
+            <p style="margin-top:10px; font-style:italic; color:#555;">💡 ${d.explanation}</p>
         </div>
     `).join('');
 }
@@ -331,7 +369,6 @@ function getPerformanceClass(score) {
     return 'poor';
 }
 
-// Hilfsfunktion für den statischen Button in test.html
 function goToDashboard() {
     window.location.href = '/';
 }
