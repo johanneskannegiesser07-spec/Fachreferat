@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🃏 Karteikarten - KI-Lern-Buddy</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                <h1>🃏 Karteikarten</h1>
+                <button onclick="location.href='/'" class="secondary" style="font-size:0.9rem; padding:8px 15px;">🏠 Dashboard</button>
+            </div>
+            <p id="topicDisplay">Erstelle oder lade ein Set</p>
+        </header>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;">
+            
+            <div id="setup" class="card">
+                <h2>✨ Neues Set generieren</h2>
+                <div class="form-group" style="flex-direction: column; align-items: stretch;">
+                    <input type="text" id="fcSubject" placeholder="Fach (z.B. Englisch)" value="Englisch">
+                    <input type="text" id="fcTopic" placeholder="Thema (z.B. Vokabeln Unit 1)" value="Business Terms">
+                    <button onclick="startFlashcards()" class="success" style="margin-top: 10px;">Karten erstellen 🪄</button>
+                </div>
+            </div>
+
+            <div id="historyCard" class="card">
+                <h2>📂 Deine Sets</h2>
+                <div id="historyList" style="max-height: 300px; overflow-y: auto;">
+                    Lade Historie...
+                </div>
+            </div>
+        </div>
+
+        <div id="player" class="hidden">
+            <div class="flashcard-container" onclick="flipCard()">
+                <div class="flashcard" id="currentCard">
+                    <div class="card-face card-front">
+                        <div class="card-content" id="cardFrontText">Frage</div>
+                        <div class="card-hint">👆 Tippen zum Umdrehen</div>
+                    </div>
+                    <div class="card-face card-back">
+                        <div class="card-content" id="cardBackText">Antwort</div>
+                        <div class="card-hint">Rückseite</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button onclick="prevCard()" class="secondary">⬅️</button>
+                <div style="align-self:center; font-weight:bold; color:white; font-size: 1.2rem;" id="counter">1 / 5</div>
+                <button onclick="nextCard()" class="success">➡️</button>
+            </div>
+            
+            <div style="text-align: center; margin-top: 20px;">
+                <button onclick="location.reload()" class="secondary">🔙 Zurück zur Übersicht</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/common.js"></script>
+    <script src="/static/flashcards.js"></script>
+</body>
+</html>

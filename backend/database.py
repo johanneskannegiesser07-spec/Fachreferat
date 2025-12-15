@@ -156,6 +156,19 @@ class DatabaseManager:
                     answered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
+
+            # 9. Karteikarten-Sets
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS flashcard_sets (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_hash TEXT,
+                    subject TEXT,
+                    topic TEXT,
+                    cards TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_hash) REFERENCES user_profiles (user_hash)
+                )
+            ''')
             
             conn.commit()
             print("✅ Datenbank: Tabellen initialisiert")
@@ -404,5 +417,43 @@ class DatabaseManager:
                 FROM test_sessions WHERE user_hash = ? AND status = 'completed'
                 ORDER BY end_time DESC LIMIT ?
             ''', (user_hash, limit)).fetchall()
+        finally:
+            conn.close()
+
+    # === FLASHCARDS ===
+
+    def save_flashcard_set(self, user_hash, subject, topic, cards):
+        conn = self.get_connection()
+        try:
+            cursor = conn.execute('''
+                INSERT INTO flashcard_sets (user_hash, subject, topic, cards)
+                VALUES (?, ?, ?, ?)
+            ''', (user_hash, subject, topic, json.dumps(cards)))
+            conn.commit()
+            return cursor.lastrowid
+        finally:
+            conn.close()
+
+    def get_flashcard_history(self, user_hash, limit=10):
+        conn = self.get_connection()
+        try:
+            return conn.execute('''
+                SELECT id, subject, topic, cards, created_at
+                FROM flashcard_sets 
+                WHERE user_hash = ? 
+                ORDER BY created_at DESC 
+                LIMIT ?
+            ''', (user_hash, limit)).fetchall()
+        finally:
+            conn.close()
+
+    def get_flashcard_set(self, set_id, user_hash):
+        conn = self.get_connection()
+        try:
+            return conn.execute('''
+                SELECT subject, topic, cards 
+                FROM flashcard_sets 
+                WHERE id = ? AND user_hash = ?
+            ''', (set_id, user_hash)).fetchone()
         finally:
             conn.close()

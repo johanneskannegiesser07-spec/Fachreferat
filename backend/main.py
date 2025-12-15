@@ -561,6 +561,45 @@ async def get_knowledge_graph(current_user: dict = Depends(get_current_user)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+class FlashcardRequest(BaseModel):
+    subject: str
+    topic: str
+    count: int = 5
+
+@app.post("/api/start-flashcards")
+async def start_flashcards(
+    request: FlashcardRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """🃏 Startet eine neue Karteikarten-Session"""
+    if not buddy: raise HTTPException(status_code=500, detail="Buddy fehlt")
+    
+    data = buddy.start_flashcard_session(
+        current_user['sub'], request.subject, request.topic, request.count
+    )
+    return {"success": True, "data": data}
+
+
+@app.get("/flashcards")
+async def serve_flashcards():
+    return FileResponse("../frontend/flashcards.html")
+
+@app.get("/api/flashcard-history")
+async def get_flashcard_history(current_user: dict = Depends(get_current_user)):
+    """📜 Holt gespeicherte Sets"""
+    if not buddy: raise HTTPException(status_code=500)
+    history = buddy.get_flashcard_history(current_user['sub'])
+    return {"success": True, "data": history}
+
+@app.get("/api/flashcards/{set_id}")
+async def get_flashcard_set(set_id: int, current_user: dict = Depends(get_current_user)):
+    """🃏 Lädt ein spezifisches Set"""
+    if not buddy: raise HTTPException(status_code=500)
+    data = buddy.load_flashcard_set(current_user['sub'], set_id)
+    if not data: raise HTTPException(status_code=404, detail="Set nicht gefunden")
+    return {"success": True, "data": data}
+
 # === START-SKRIPT ===
 
 if __name__ == "__main__":

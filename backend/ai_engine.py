@@ -148,3 +148,27 @@ class AIEngine:
                 time.sleep(1 + attempt) # Kurze Pause vor Retry
         
         return None
+
+    def generate_flashcards(self, subject, topic, count=5):
+        """
+        🃏 Generiert Lern-Karteikarten (Vorderseite/Rückseite)
+        """
+        prompt = f"""
+        LERN-KARTEIKARTEN GENERATOR:
+        Fach: {subject}
+        Thema: {topic}
+        Anzahl: {count}
+
+        Erstelle Karteikarten zum effektiven Lernen.
+        - Vorderseite: Ein wichtiger Begriff, eine kurze Frage oder eine Formel.
+        - Rückseite: Die prägnante Definition, Antwort oder Lösung (max 2-3 Sätze).
+
+        Antworte STRENG als JSON:
+        {{
+            "flashcards": [
+                {{ "front": "Begriff/Frage", "back": "Erklärung/Antwort" }},
+                {{ "front": "...", "back": "..." }}
+            ]
+        }}
+        """
+        return self._robust_api_call(prompt, response_format="json")

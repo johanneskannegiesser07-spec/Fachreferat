@@ -367,3 +367,50 @@ class UniversalLernBuddy:
                 })
 
         return {"nodes": nodes, "edges": edges}
+
+
+    # === KARTEIKARTEN ===
+
+    def start_flashcard_session(self, username, subject, topic, count=10):
+        user_hash = self.db.get_user_hash(username)
+        print(f"🃏 Generiere Karteikarten für {subject}...")
+        
+        # KI Generierung
+        cards_data = self.ai.generate_flashcards(subject, topic, count)
+        
+        if not cards_data or 'flashcards' not in cards_data:
+            cards_data = {
+                "flashcards": [{"front": "Fehler", "back": "Konnte keine Karten generieren."}]
+            }
+        
+        # SPEICHERN IN DB
+        set_id = self.db.save_flashcard_set(user_hash, subject, topic, cards_data['flashcards'])
+            
+        return {
+            "set_id": set_id,
+            "subject": subject,
+            "topic": topic,
+            "cards": cards_data['flashcards']
+        }
+
+    def get_flashcard_history(self, username):
+        user_hash = self.db.get_user_hash(username)
+        history = self.db.get_flashcard_history(user_hash)
+        return [
+            {
+                "id": h[0], "subject": h[1], "topic": h[2], 
+                "card_count": len(json.loads(h[3])), 
+                "date": h[4]
+            } 
+            for h in history
+        ]
+
+    def load_flashcard_set(self, username, set_id):
+        user_hash = self.db.get_user_hash(username)
+        res = self.db.get_flashcard_set(set_id, user_hash)
+        if res:
+            return {
+                "id": set_id, "subject": res[0], "topic": res[1], 
+                "cards": json.loads(res[2])
+            }
+        return None
