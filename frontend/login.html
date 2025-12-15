@@ -3,45 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🤖 KI-Lern-Buddy - Login</title>
+    <title>Login - KI-Lern-Buddy</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="login-container">
-        <h1>🤖 KI-Lern-Buddy</h1>
+    <div class="container" style="max-width: 500px; margin-top: 50px;">
         
-        <div id="loginForm">
-            <div class="form-group">
-                <input type="text" id="loginUsername" placeholder="Benutzername" value="test_user">
-                <input type="password" id="loginPassword" placeholder="Passwort" value="test123">
-                <button onclick="login()">Anmelden</button>
-            </div>
-            <div class="switch-mode">
-                Noch keinen Account? <a onclick="showRegister()">Registrieren</a>
-            </div>
-        </div>
+        <header>
+            <h1>👋 Willkommen</h1>
+            <p>Melde dich an, um mit deinem KI-Coach zu lernen</p>
+        </header>
 
-        <div id="registerForm" style="display: none;">
-            <div class="form-group">
-                <input type="text" id="regUsername" placeholder="Benutzername">
-                <input type="email" id="regEmail" placeholder="E-Mail">
-                <input type="password" id="regPassword" placeholder="Passwort">
-                <input type="password" id="regPasswordConfirm" placeholder="Passwort bestätigen">
-                <button onclick="register()">Registrieren</button>
-            </div>
-            <div class="switch-mode">
-                Bereits Account? <a onclick="showLogin()">Anmelden</a>
-            </div>
-        </div>
+        <div class="card">
+            
+            <div id="loginForm">
+                <h2 style="text-align: center; border-bottom: none;">Anmelden</h2>
+                
+                <div class="form-group" style="flex-direction: column; align-items: stretch;">
+                    <label>Benutzername</label>
+                    <input type="text" id="loginUsername" placeholder="Dein Username">
+                </div>
+                
+                <div class="form-group" style="flex-direction: column; align-items: stretch;">
+                    <label>Passwort</label>
+                    <input type="password" id="loginPassword" placeholder="••••••">
+                </div>
 
-        <div id="message"></div>
-        <div id="debug" class="debug" style="display: none;"></div>
+                <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px;">
+                    <button onclick="login()" class="success" style="width: 100%;">🚀 Einloggen</button>
+                    
+                    <p style="text-align: center; margin-top: 10px; color: #666;">
+                        Noch kein Konto? 
+                        <a href="#" onclick="toggleForms(); return false;" style="color: #667eea; font-weight: bold;">Jetzt registrieren</a>
+                    </p>
+                </div>
+            </div>
+
+            <div id="registerForm" style="display: none;">
+                <h2 style="text-align: center; border-bottom: none;">Neues Konto</h2>
+                
+                <div class="form-group" style="flex-direction: column; align-items: stretch;">
+                    <label>Benutzername</label>
+                    <input type="text" id="regUsername" placeholder="Wähle einen Usernamen">
+                </div>
+
+                <div class="form-group" style="flex-direction: column; align-items: stretch;">
+                    <label>E-Mail (Optional)</label>
+                    <input type="email" id="regEmail" placeholder="mail@schule.de">
+                </div>
+                
+                <div class="form-group" style="flex-direction: column; align-items: stretch;">
+                    <label>Passwort</label>
+                    <input type="password" id="regPassword" placeholder="Wähle ein Passwort">
+                </div>
+
+                <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px;">
+                    <button onclick="register()" class="primary" style="width: 100%;">✨ Konto erstellen</button>
+                    
+                    <p style="text-align: center; margin-top: 10px; color: #666;">
+                        Bereits registriert? 
+                        <a href="#" onclick="toggleForms(); return false;" style="color: #667eea; font-weight: bold;">Zum Login</a>
+                    </p>
+                </div>
+            </div>
+
+            <div id="message" style="display:none; margin-top:20px; text-align: center;"></div>
         
-        <div style="text-align: center; margin-top: 20px;">
-            <button onclick="toggleDebug()" style="background: #6c757d; padding: 5px 10px; font-size: 12px;">Debug Info</button>
-            <button onclick="clearStorage()" style="background: #dc3545; padding: 5px 10px; font-size: 12px;">Clear Storage</button>
         </div>
     </div>
+
     <script src="/static/common.js"></script>
     <script src="/static/login.js"></script>
 </body>

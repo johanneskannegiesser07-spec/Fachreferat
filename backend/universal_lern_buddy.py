@@ -316,5 +316,54 @@ class UniversalLernBuddy:
             })
         return history
     
-    # Kompatibilitäts-Wrapper für main.py (falls alte Aufrufe noch da sind)
     def submit_test_answer(self, u, t, q, a): return self.save_answer(u, t, q, a)
+
+    # === GRAPH FEATURE ===
+
+    def get_knowledge_graph_data(self, username):
+        user_hash = self.db.get_user_hash(username)
+        raw_data = self.db.get_subject_averages(user_hash)
+        
+        # 1. Nodes erstellen (Fächer)
+        nodes = []
+        subjects_found = {} # Map für schnellen Zugriff: subject -> score
+        
+        for row in raw_data:
+            subj, score, count = row
+            subjects_found[subj] = score
+            
+            # Farbe je nach Score (Grün = Gut, Rot = Schlecht)
+            color = "#28a745" if score >= 80 else "#ffc107" if score >= 50 else "#dc3545"
+            
+            nodes.append({
+                "id": subj,
+                "label": f"{subj}\n({int(score)}%)",
+                "value": score, # Größe der Bubble
+                "color": color,
+                "title": f"{count} Tests absolviert" # Tooltip
+            })
+
+        # 2. Edges definieren (Logische Verbindungen)
+        # Wir definieren hier ein "ideales" Netz. Edges werden nur erstellt, 
+        # wenn der User beide Fächer schon gelernt hat.
+        defined_connections = [
+            ("Mathe", "Physik"), ("Mathe", "Informatik"), ("Mathe", "Chemie"),
+            ("Physik", "Chemie"), ("Biologie", "Chemie"),
+            ("Deutsch", "Englisch"), ("Englisch", "Französisch"), ("Englisch", "Latein"),
+            ("Geschichte", "Politik"), ("Geschichte", "Deutsch"),
+            ("Wirtschaft", "Mathe"), ("Wirtschaft", "Politik")
+        ]
+        
+        edges = []
+        for source, target in defined_connections:
+            if source in subjects_found and target in subjects_found:
+                # Kanten-Dicke basiert auf dem Durchschnitt beider Fächer
+                avg_strength = (subjects_found[source] + subjects_found[target]) / 2
+                edges.append({
+                    "from": source, 
+                    "to": target,
+                    "value": avg_strength / 10, # Dicke der Linie
+                    "color": {"color": "#999", "opacity": 0.5}
+                })
+
+        return {"nodes": nodes, "edges": edges}

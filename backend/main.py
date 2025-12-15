@@ -550,6 +550,17 @@ async def retake_test(
          
     return {"success": True, "data": result}
 
+@app.get("/api/knowledge-graph")
+async def get_knowledge_graph(current_user: dict = Depends(get_current_user)):
+    """🕸️ Liefert Daten für den Wissens-Graphen"""
+    if not buddy: raise HTTPException(status_code=500, detail="Buddy nicht geladen")
+    
+    try:
+        graph_data = buddy.get_knowledge_graph_data(current_user['sub'])
+        return {"success": True, "data": graph_data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # === START-SKRIPT ===
 
 if __name__ == "__main__":

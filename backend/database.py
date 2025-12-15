@@ -330,6 +330,22 @@ class DatabaseManager:
         finally:
             conn.close()
 
+    def get_subject_averages(self, user_hash):
+        """Holt Durchschnittsscore pro Fach für den Graphen"""
+        conn = self.get_connection()
+        try:
+            # Wir nehmen Daten aus Test-Sessions UND Study-Sessions
+            # Hier vereinfacht: Nur Test-Sessions für präzise Leistungsdaten
+            results = conn.execute('''
+                SELECT subject, AVG(score) as avg_score, COUNT(*) as count 
+                FROM test_sessions 
+                WHERE user_hash = ? AND status = 'completed' 
+                GROUP BY subject
+            ''', (user_hash,)).fetchall()
+            return results
+        finally:
+            conn.close()
+
     # === TESTS ===
 
     def create_test_session(self, test_id, user_hash, subject, topic, questions_json, count, start_time):

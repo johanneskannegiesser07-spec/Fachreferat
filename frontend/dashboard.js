@@ -118,3 +118,55 @@ function goToTest() {
 function showAnalytics() { showOutput("Analytics Feature kommt bald! (Daten werden bereits gesammelt)", "success-msg"); }
 function showProfile() { showOutput("Profil-Analyse läuft im Hintergrund.", "success-msg"); }
 function showRecommendations() { showOutput("Basierend auf deinen Tests: Mehr Mathe üben! 😉", "success-msg"); }
+
+// loadKnowledgeGraph();
+
+async function loadKnowledgeGraph() {
+    const container = document.getElementById('knowledgeGraph');
+    if (!container) return;
+
+    try {
+        const result = await apiCall('/api/knowledge-graph');
+        
+        if (result.success && result.data.nodes.length > 0) {
+            const data = {
+                nodes: new vis.DataSet(result.data.nodes),
+                edges: new vis.DataSet(result.data.edges)
+            };
+            
+            const options = {
+                nodes: {
+                    shape: 'dot',
+                    font: { size: 16, face: 'Segoe UI' },
+                    borderWidth: 2,
+                    shadow: true
+                },
+                edges: {
+                    width: 2,
+                    smooth: { type: 'continuous' }
+                },
+                physics: {
+                    enabled: true,
+                    barnesHut: {
+                        gravitationalConstant: -2000,
+                        centralGravity: 0.3,
+                        springLength: 95
+                    }
+                },
+                interaction: { hover: true }
+            };
+            
+            container.innerHTML = ''; // Lade-Text entfernen
+            new vis.Network(container, data, options);
+        } else {
+            container.innerHTML = `
+                <div style="text-align:center; padding-top:150px; color:#888;">
+                    <p>Noch nicht genügend Daten für den Graphen.</p>
+                    <p style="font-size:0.9em;">Absolviere Tests in verschiedenen Fächern!</p>
+                </div>`;
+        }
+    } catch (e) {
+        console.error("Graph Error:", e);
+        container.innerHTML = '<p style="color:red; text-align:center; padding-top:150px;">Fehler beim Laden des Graphen.</p>';
+    }
+}
