@@ -1,4 +1,5 @@
 // frontend/dashboard.js - Logik für das Dashboard
+
 document.addEventListener('DOMContentLoaded', async function() {
     await checkAuthentication();
     loadSchoolContext();
@@ -28,7 +29,6 @@ async function loadSchoolContext() {
 }
 
 async function generateExercises() {
-    // Einfache Demo-Funktion für das Dashboard
     const subject = document.getElementById('subject').value;
     const topic = document.getElementById('topic').value;
     
@@ -47,6 +47,22 @@ async function generateExercises() {
             showOutput(html);
         }
     } catch(e) { /* Error handled in apiCall */ }
+}
+
+async function trackSession() {
+    const subject = document.getElementById('sessionSubject').value;
+    const duration = document.getElementById('duration').value;
+    const topics = document.getElementById('sessionTopics').value.split(',');
+    const performance = document.getElementById('performance').value;
+
+    try {
+        // Hier müsste noch ein API Endpunkt implementiert werden,
+        // oder wir zeigen vorerst nur eine Meldung:
+        showOutput(`Session gespeichert: ${subject} (${duration}min)`, "success-msg");
+        // apiCall('/api/track-session', 'POST', { ... }); 
+    } catch(e) {
+        console.error(e);
+    }
 }
 
 async function loadTestHistory() {
@@ -88,6 +104,17 @@ function retakeTest(testId) {
     window.location.href = '/test';
 }
 
+// --- NAVIGATION ---
+
+function showSchoolSetup() {
+    window.location.href = '/school-setup';
+}
+
+function goToTest() {
+    window.location.href = '/test';
+}
+
+// --- PLATZHALTER ---
 function showAnalytics() { showOutput("Analytics Feature kommt bald! (Daten werden bereits gesammelt)", "success-msg"); }
 function showProfile() { showOutput("Profil-Analyse läuft im Hintergrund.", "success-msg"); }
-function showRecommendations() { showOutput("Basierend auf deinen 0 Tests: Mehr Mathe üben! 😉", "success-msg"); }
+function showRecommendations() { showOutput("Basierend auf deinen Tests: Mehr Mathe üben! 😉", "success-msg"); }
