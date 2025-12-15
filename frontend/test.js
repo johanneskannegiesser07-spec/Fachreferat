@@ -235,21 +235,24 @@ async function finishTest() {
 function renderResults(data) {
     const container = document.getElementById('testResult');
     
+    // Wir bauen das HTML explizit in der richtigen Reihenfolge auf
+    // NEU: style="..." enthält jetzt background: white und box-shadow für den "Kasten"-Look
     let html = `
-        <div class="result-content" style="max-width: 800px; margin: 0 auto; padding: 20px;">
+        <div class="result-content" style="max-width: 850px; margin: 20px auto; padding: 40px; background: white; border-radius: 20px; box-shadow: 0 15px 40px rgba(0,0,0,0.15);">
             
-            <div style="text-align: center; margin-bottom: 40px; border-bottom: 1px solid #eee; padding-bottom: 20px;">
-                <h2 style="margin-bottom: 20px; color: #333;">📊 Dein Testergebnis</h2>
+            <div style="text-align: center; margin-bottom: 40px; border-bottom: 2px solid #f0f0f0; padding-bottom: 30px;">
+                <h2 style="margin-bottom: 25px; color: #2d3748; font-size: 2rem;">📊 Dein Testergebnis</h2>
                 
-                <div style="display: flex; justify-content: center; align-items: center; gap: 30px; flex-wrap: wrap;">
-                    <div class="score-circle">
+                <div style="display: flex; justify-content: center; align-items: center; gap: 40px; flex-wrap: wrap;">
+                    <div class="score-circle" style="transform: scale(1.1);">
                         ${Math.round(data.score)}%
                     </div>
+                    
                     <div style="text-align: left;">
-                        <div class="performance-badge ${getPerformanceClass(data.score)}" style="font-size: 1.2rem; margin-bottom: 10px; display: inline-block;">
+                        <div class="performance-badge ${getPerformanceClass(data.score)}" style="font-size: 1.1rem; padding: 8px 16px; margin-bottom: 12px; display: inline-block;">
                             ${data.performance_level}
                         </div>
-                        <div style="font-size: 1.1rem; color: #555; line-height: 1.6;">
+                        <div style="font-size: 1.2rem; color: #4a5568; line-height: 1.6;">
                             ✅ <strong>${data.correct_answers}</strong> von ${data.total_questions} Richtig<br>
                             ⏱️ Zeit: ${Math.round(data.time_spent_seconds / 60)} min
                         </div>
@@ -257,26 +260,30 @@ function renderResults(data) {
                 </div>
             </div>
 
-            <div class="feedback-section" style="margin-bottom: 40px; background: #f8f9fa; border-radius: 12px; padding: 5px;">
+            <div class="feedback-section" style="margin-bottom: 40px; background: #f8faff; border-radius: 16px; padding: 5px; border: 1px solid #e2e8f0;">
+                <h3 style="margin: 20px 0 15px 25px; color: #5a67d8;">🚀 Coach-Feedback</h3>
                 <div class="feedback-container">
                     ${renderAiFeedback(data.comprehensive_feedback)}
                 </div>
             </div>
 
             <div class="details-section" style="margin-bottom: 40px;">
-                <h3 style="margin-bottom: 20px; border-left: 5px solid #667eea; padding-left: 10px;">📋 Detaillierte Auswertung</h3>
-                <div class="results-list" style="display: flex; flex-direction: column; gap: 15px;">
+                <h3 style="margin-bottom: 25px; border-left: 6px solid #667eea; padding-left: 15px; font-size: 1.5rem; color: #2d3748;">📋 Detaillierte Auswertung</h3>
+                <div class="results-list" style="display: flex; flex-direction: column; gap: 20px;">
                     ${renderDetailedAnswers(data.detailed_answers)}
                 </div>
             </div>
 
-            <div style="display: flex; gap: 15px; justify-content: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee;">
-                <button onclick="window.location.reload()" class="success">🔄 Test wiederholen</button>
-                <button onclick="goToDashboard()" class="secondary">🏠 Zum Dashboard</button>
+            <div style="display: flex; gap: 20px; justify-content: center; margin-top: 50px; padding-top: 30px; border-top: 2px solid #f0f0f0;">
+                <button onclick="window.location.reload()" class="success" style="padding: 15px 30px; font-size: 1.1rem;">🔄 Test wiederholen</button>
+                <button onclick="goToDashboard()" class="secondary" style="padding: 15px 30px; font-size: 1.1rem;">🏠 Zum Dashboard</button>
             </div>
         </div>
     `;
+    
     container.innerHTML = html;
+    
+    // Scrollen nach oben
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 

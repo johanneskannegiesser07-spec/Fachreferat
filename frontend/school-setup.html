@@ -8,88 +8,86 @@
 </head>
 <body>
     <div class="container">
-        <h1>🏫 Schulkonfiguration</h1>
-        <p style="text-align: center; margin-bottom: 20px; color: #666;">
-            Personalisiere deine Lernunterstützung für deine Schule
-        </p>
         
-        <form id="schoolForm">
-            <div class="form-group">
-                <label for="schoolType">Schulart:</label>
-                <select id="schoolType" required>
-                    <option value="">Bitte wählen</option>
-                    <option value="gymnasium">Gymnasium</option>
-                    <option value="fos">Fachoberschule (FOS)</option>
-                    <option value="bos">Berufsoberschule (BOS)</option>
-                    <option value="realschule">Realschule</option>
-                    <option value="mittelschule">Mittelschule</option>
-                    <option value="berufsschule">Berufsschule</option>
-                </select>
-            </div>
+        <header>
+            <h1>🏫 Schul-Setup</h1>
+            <p>Konfiguriere deinen Lern-Buddy für optimale Ergebnisse</p>
+        </header>
+
+        <div class="card">
+            <h2>⚙️ Deine Einstellungen</h2>
+            <p style="margin-bottom: 20px; color: #666;">
+                Damit die KI passende Aufgaben erstellt, brauchen wir ein paar Infos.
+            </p>
+
+            <form id="schoolForm">
+                <div class="form-group">
+                    <label for="schoolType">Schulart</label>
+                    <select id="schoolType" required>
+                        <option value="">Bitte wählen...</option>
+                        <option value="gymnasium">Gymnasium</option>
+                        <option value="realschule">Realschule</option>
+                        <option value="fos">FOS (Fachoberschule)</option>
+                        <option value="bos">BOS (Berufsoberschule)</option>
+                        <option value="hauptschule">Mittelschule</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="grade">Klasse / Jahrgangsstufe</label>
+                    <select id="grade" required>
+                        <option value="">Bitte wählen...</option>
+                        <option value="5">5. Klasse</option>
+                        <option value="6">6. Klasse</option>
+                        <option value="7">7. Klasse</option>
+                        <option value="8">8. Klasse</option>
+                        <option value="9">9. Klasse</option>
+                        <option value="10">10. Klasse</option>
+                        <option value="11">11. Klasse / Q11</option>
+                        <option value="12">12. Klasse / Q12</option>
+                        <option value="13">13. Klasse</option>
+                        <option value="fos11">FOS 11</option>
+                        <option value="fos12">FOS 12</option>
+                        <option value="fos13">FOS 13</option>
+                        <option value="bos12">BOS 12</option>
+                        <option value="bos13">BOS 13</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="state">Bundesland</label>
+                    <select id="state">
+                        <option value="Bayern" selected>Bayern</option>
+                        <option value="Baden-Württemberg">Baden-Württemberg</option>
+                        <option value="NRW">Nordrhein-Westfalen</option>
+                        <option value="Andere">Anderes Bundesland</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="focus">Schwerpunkt (Optional)</label>
+                    <select id="focus">
+                        <option value="allgemein">Allgemein</option>
+                        <option value="naturwissenschaft">Naturwissenschaftlich (MINT)</option>
+                        <option value="sprachlich">Sprachlich</option>
+                        <option value="wirtschaft">Wirtschaft & Recht</option>
+                        <option value="kunst">Kunst & Musik</option>
+                        <option value="technik">Technik (FOS)</option>
+                        <option value="sozial">Soziales (FOS)</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-top: 30px;">
+                    <button type="button" onclick="goToDashboard()" class="danger">Abbrechen</button>
+                    <button type="button" onclick="skipSetup()" class="secondary">Überspringen</button>
+                    <button type="submit" class="success">Speichern ✅</button>
+                </div>
+            </form>
             
-            <div class="form-group">
-                <label for="grade">Klasse/Jahrgangsstufe:</label>
-                <select id="grade" required>
-                    <option value="">Bitte wählen</option>
-                    <option value="5">5. Klasse</option>
-                    <option value="6">6. Klasse</option>
-                    <option value="7">7. Klasse</option>
-                    <option value="8">8. Klasse</option>
-                    <option value="9">9. Klasse</option>
-                    <option value="10">10. Klasse</option>
-                    <option value="11">11. Klasse</option>
-                    <option value="12">12. Klasse</option>
-                    <option value="13">13. Klasse</option>
-                    <option value="fos11">FOS 11</option>
-                    <option value="fos12">FOS 12</option>
-                    <option value="fos13">FOS 13</option>
-                    <option value="bos12">BOS 12</option>
-                    <option value="bos13">BOS 13</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label for="state">Bundesland:</label>
-                <select id="state" required>
-                    <option value="Bayern" selected>Bayern</option>
-                    <option value="Baden-Württemberg">Baden-Württemberg</option>
-                    <option value="Berlin">Berlin</option>
-                    <option value="Hamburg">Hamburg</option>
-                    <option value="Hessen">Hessen</option>
-                    <option value="Niedersachsen">Niedersachsen</option>
-                    <option value="Nordrhein-Westfalen">Nordrhein-Westfalen</option>
-                    <option value="Rheinland-Pfalz">Rheinland-Pfalz</option>
-                    <option value="Saarland">Saarland</option>
-                    <option value="Sachsen">Sachsen</option>
-                    <option value="Sachsen-Anhalt">Sachsen-Anhalt</option>
-                    <option value="Schleswig-Holstein">Schleswig-Holstein</option>
-                    <option value="Thüringen">Thüringen</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label>Schwerpunkt (optional):</label>
-                <select id="focus">
-                    <option value="allgemein">Allgemein</option>
-                    <option value="technik">Technik</option>
-                    <option value="wirtschaft">Wirtschaft</option>
-                    <option value="sozialwesen">Sozialwesen</option>
-                    <option value="gestaltung">Gestaltung</option>
-                    <option value="naturwissenschaft">Naturwissenschaft</option>
-                    <option value="sprachen">Sprachen</option>
-                </select>
-            </div>
-            
-            <button type="submit">✅ Konfiguration speichern</button>
-        </form>
-        
-        <div id="message" class="message"></div>
-        
-        <div class="navigation">
-            <button class="secondary" onclick="goToDashboard()">📊 Zum Dashboard</button>
-            <button class="secondary" onclick="skipSetup()">⏩ Später konfigurieren</button>
+            <div id="message" style="display:none; margin-top:20px; padding:15px; border-radius:5px;"></div>
         </div>
     </div>
+
     <script src="/static/common.js"></script>
     <script src="/static/school-setup.js"></script>
 </body>
