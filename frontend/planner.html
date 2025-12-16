@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📅 Lernplaner - KI-Lern-Buddy</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        /* Spezifisches CSS für den Planer */
+        .timeline { position: relative; max-width: 800px; margin: 20px auto; }
+        .timeline::after {
+            content: ''; position: absolute; width: 4px; background-color: #e9ecef;
+            top: 0; bottom: 0; left: 20px; margin-left: -2px; z-index: 0;
+        }
+        
+        .day-card {
+            position: relative; background: white; border-radius: 8px; 
+            padding: 15px 20px; margin-bottom: 20px; margin-left: 50px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 4px solid #667eea;
+            z-index: 1;
+        }
+        
+        .day-badge {
+            position: absolute; left: -65px; top: 15px; width: 30px; height: 30px;
+            background: #667eea; color: white; border-radius: 50%;
+            text-align: center; line-height: 30px; font-weight: bold; z-index: 2;
+        }
+
+        .plan-header {
+            display: flex; justify-content: space-between; align-items: center;
+            background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;
+            border: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h1>📅 Lernplan-Generator</h1>
+                <button onclick="location.href='/'" class="secondary">🏠 Dashboard</button>
+            </div>
+            <p>Gib dein Klausur-Datum ein und die KI plant deinen Erfolg.</p>
+        </header>
+
+        <div class="card">
+            <h2>✨ Neuer Plan</h2>
+            <div class="form-group" style="align-items: end;">
+                <div style="flex:1;">
+                    <label style="display:block; margin-bottom:5px; font-weight:bold;">Fach</label>
+                    <input type="text" id="subject" placeholder="z.B. Mathe Analysis" style="width:100%;">
+                </div>
+                <div style="flex:1;">
+                    <label style="display:block; margin-bottom:5px; font-weight:bold;">Klausur-Datum</label>
+                    <input type="date" id="examDate" style="width:100%;">
+                </div>
+                <button onclick="createPlan()" class="success" style="height: 48px;">Plan erstellen 🚀</button>
+            </div>
+        </div>
+
+        <div id="plansContainer">
+            </div>
+    </div>
+
+    <script src="/static/common.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            await checkAuthentication();
+            loadPlans();
+            
+            // Datum-Input auf morgen setzen als Minimum
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            document.getElementById('examDate').min = tomorrow.toISOString().split('T')[0];
+        });
+
+        async function createPlan() {
+            const subject = document.getElementById('subject').value;
+            const examDate = document.getElementById('examDate').value;
+            
+            if(!subject || !examDate) return alert("Bitte Fach und Datum eingeben!");
+
+            const btn = document.querySelector('button.success');
+            const originalText = btn.textContent;
+            btn.textContent = "⏳ KI plant...";
+            btn.disabled = true;
+
+            try {
+                const res = await apiCall('/api/create-plan', 'POST', { subject, exam_date: examDate });
+                if(res.success) {
+                    document.getElementById('subject').value = '';
+                    document.getElementById('examDate').value = '';
+                    loadPlans(); // Neu laden
+                }
+            } catch(e) {
+                alert(e.message);
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        async function loadPlans() {
+            const container = document.getElementById('plansContainer');
+            container.innerHTML = '<p style="text-align:center; color:#999;">Lade Pläne...</p>';
+            
+            try {
+                const res = await apiCall('/api/my-plans');
+                if(res.success && res.data.length > 0) {
+                    container.innerHTML = res.data.map(plan => renderPlan(plan)).join('');
+                } else {
+                    container.innerHTML = '<p style="text-align:center; padding:30px; color:#999;">Noch keine Lernpläne erstellt.</p>';
+                }
+            } catch(e) {
+                container.innerHTML = '<p class="error-msg">Fehler beim Laden.</p>';
+            }
+        }
+
+        function renderPlan(plan) {
+            // Datum formatieren
+            const dateStr = new Date(plan.exam_date).toLocaleDateString('de-DE');
+            
+            // Timeline Items
+            const itemsHtml = plan.plan.map((day, index) => `
+                <div class="day-card">
+                    <div class="day-badge">${day.day}</div>
+                    <h4 style="margin-bottom:5px; color:#333;">${day.topic}</h4>
+                    <p style="color:#666; margin:0;">👉 ${day.activity}</p>
+                </div>
+            `).join('');
+
+            return `
+                <div class="card" style="margin-top:30px;">
+                    <div class="plan-header">
+                        <div>
+                            <h2 style="margin:0; border:none; font-size:1.4rem;">${plan.subject}</h2>
+                            <span style="color:#dc3545; font-weight:bold;">🎯 Klausur am ${dateStr}</span>
+                        </div>
+                        <button onclick="deletePlan(${plan.id})" class="secondary" style="padding:5px 10px; font-size:0.8rem;">🗑️ Löschen</button>
+                    </div>
+                    <div class="timeline">
+                        ${itemsHtml}
+                        <div class="day-card" style="border-left-color: #28a745; background: #d4edda;">
+                            <div class="day-badge" style="background:#28a745;">🏁</div>
+                            <h4 style="margin:0; color:#155724;">KLAUSUR TAG!</h4>
+                            <p style="color:#155724;">Viel Erfolg! Du bist vorbereitet.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function deletePlan(id) {
+            if(!confirm("Plan wirklich löschen?")) return;
+            await apiCall(`/api/plans/${id}`, 'DELETE');
+            loadPlans();
+        }
+    </script>
+</body>
+</html>

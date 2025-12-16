@@ -169,6 +169,19 @@ class DatabaseManager:
                     FOREIGN KEY (user_hash) REFERENCES user_profiles (user_hash)
                 )
             ''')
+
+            # 10. Lernpläne
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS study_plans (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_hash TEXT,
+                    subject TEXT,
+                    exam_date TEXT,
+                    plan_data TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_hash) REFERENCES user_profiles (user_hash)
+                )
+            ''')
             
             conn.commit()
             print("✅ Datenbank: Tabellen initialisiert")
@@ -455,5 +468,47 @@ class DatabaseManager:
                 FROM flashcard_sets 
                 WHERE id = ? AND user_hash = ?
             ''', (set_id, user_hash)).fetchone()
+        finally:
+            conn.close()
+
+    def get_flashcard_counts(self, user_hash):
+        """Zählt Lern-Sets pro Fach für den Graphen"""
+        conn = self.get_connection()
+        try:
+            results = conn.execute('''
+                SELECT subject, COUNT(*) as count 
+                FROM flashcard_sets 
+                WHERE user_hash = ? 
+                GROUP BY subject
+            ''', (user_hash,)).fetchall()
+            return results
+        finally:
+            conn.close()
+
+    # === LERNPLÄNE ===
+
+    def save_study_plan(self, user_hash, subject, exam_date, plan_data):
+        conn = self.get_connection()
+        try:
+            conn.execute('INSERT INTO study_plans (user_hash, subject, exam_date, plan_data) VALUES (?, ?, ?, ?)',
+                        (user_hash, subject, exam_date, json.dumps(plan_data)))
+            conn.commit()
+            return True
+        finally:
+            conn.close()
+
+    def get_study_plans(self, user_hash):
+        conn = self.get_connection()
+        try:
+            return conn.execute('SELECT id, subject, exam_date, plan_data, created_at FROM study_plans WHERE user_hash = ? ORDER BY exam_date ASC', (user_hash,)).fetchall()
+        finally:
+            conn.close()
+            
+    def delete_study_plan(self, plan_id, user_hash):
+        conn = self.get_connection()
+        try:
+            conn.execute('DELETE FROM study_plans WHERE id = ? AND user_hash = ?', (plan_id, user_hash))
+            conn.commit()
+            return True
         finally:
             conn.close()

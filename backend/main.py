@@ -600,6 +600,28 @@ async def get_flashcard_set(set_id: int, current_user: dict = Depends(get_curren
     if not data: raise HTTPException(status_code=404, detail="Set nicht gefunden")
     return {"success": True, "data": data}
 
+
+class PlanRequest(BaseModel):
+    subject: str
+    exam_date: str
+
+@app.post("/api/create-plan")
+async def create_plan(req: PlanRequest, current_user: dict = Depends(get_current_user)):
+    """📅 Erstellt neuen Lernplan"""
+    res = buddy.create_study_plan(current_user['sub'], req.subject, req.exam_date)
+    if "error" in res: raise HTTPException(status_code=400, detail=res["error"])
+    return {"success": True, "data": res}
+
+@app.get("/api/my-plans")
+async def get_plans(current_user: dict = Depends(get_current_user)):
+    """📂 Holt alle Pläne"""
+    return {"success": True, "data": buddy.get_user_study_plans(current_user['sub'])}
+
+@app.delete("/api/plans/{plan_id}")
+async def delete_plan(plan_id: int, current_user: dict = Depends(get_current_user)):
+    buddy.delete_plan(current_user['sub'], plan_id)
+    return {"success": True}
+
 # === START-SKRIPT ===
 
 if __name__ == "__main__":

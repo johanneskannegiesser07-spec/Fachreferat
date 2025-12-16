@@ -5,7 +5,7 @@ Verbindet Datenbank, KI-Engine und Business-Logik.
 
 import json
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from database import DatabaseManager
 from ai_engine import AIEngine  # Unsere neue KI-Klasse
 
@@ -322,52 +322,88 @@ class UniversalLernBuddy:
 
     def get_knowledge_graph_data(self, username):
         user_hash = self.db.get_user_hash(username)
-        raw_data = self.db.get_subject_averages(user_hash)
         
-        # 1. Nodes erstellen (Fächer)
-        nodes = []
-        subjects_found = {} # Map für schnellen Zugriff: subject -> score
+        # 1. Daten holen
+        test_data = self.db.get_subject_averages(user_hash)     # [(Mathe, 80.5, 5), ...]
+        card_data = self.db.get_flashcard_counts(user_hash)     # [(Mathe, 3), ...]
         
-        for row in raw_data:
+        # 2. Daten zusammenführen (Dictionary für schnellen Zugriff)
+        subjects = {}
+        
+        # Erst Testergebnisse verarbeiten
+        for row in test_data:
             subj, score, count = row
-            subjects_found[subj] = score
+            subjects[subj] = {
+                "score": score, 
+                "test_count": count, 
+                "card_count": 0
+            }
             
-            # Farbe je nach Score (Grün = Gut, Rot = Schlecht)
-            color = "#28a745" if score >= 80 else "#ffc107" if score >= 50 else "#dc3545"
+        # Dann Flashcards dazuaddieren
+        for row in card_data:
+            subj, count = row
+            if subj not in subjects:
+                # Fach existiert nur als Karteikarte (noch kein Test gemacht)
+                subjects[subj] = {"score": 0, "test_count": 0, "card_count": count}
+            else:
+                subjects[subj]["card_count"] = count
+
+        # 3. Nodes erstellen
+        nodes = []
+        for subj, data in subjects.items():
+            score = data["score"]
+            total_activity = data["test_count"] + data["card_count"]
             
+            # Farbe basiert NUR auf Test-Score (Leistung)
+            if data["test_count"] == 0:
+                color = "#6c757d" # Grau (nur gelernt, nie getestet)
+            elif score >= 80: color = "#28a745" # Grün
+            elif score >= 50: color = "#ffc107" # Gelb
+            else: color = "#dc3545" # Rot
+            
+            # Größe basiert auf Aktivität (Tests + Flashcards)
+            # Basisgröße 20 + 5 pro Aktivität (max 60)
+            size = min(60, 20 + (total_activity * 5))
+
             nodes.append({
                 "id": subj,
-                "label": f"{subj}\n({int(score)}%)",
-                "value": score, # Größe der Bubble
+                "label": f"{subj}\n({int(score)}%)" if data["test_count"] > 0 else f"{subj}\n(Lernen)",
+                "value": size,  # Hier wirkt sich das Flashcard-Lernen aus!
                 "color": color,
-                "title": f"{count} Tests absolviert" # Tooltip
+                "title": f"{data['test_count']} Tests, {data['card_count']} Lern-Sets" # Tooltip
             })
 
-        # 2. Edges definieren (Logische Verbindungen)
-        # Wir definieren hier ein "ideales" Netz. Edges werden nur erstellt, 
-        # wenn der User beide Fächer schon gelernt hat.
+        # 4. Edges definieren (Logische Verbindungen bleiben gleich)
         defined_connections = [
             ("Mathe", "Physik"), ("Mathe", "Informatik"), ("Mathe", "Chemie"),
             ("Physik", "Chemie"), ("Biologie", "Chemie"),
             ("Deutsch", "Englisch"), ("Englisch", "Französisch"), ("Englisch", "Latein"),
             ("Geschichte", "Politik"), ("Geschichte", "Deutsch"),
-            ("Wirtschaft", "Mathe"), ("Wirtschaft", "Politik")
+            ("Wirtschaft", "Mathe"), ("Wirtschaft", "Politik"),
+            ("Geografie", "Wirtschaft"), ("Biologie", "Geografie")
         ]
         
         edges = []
         for source, target in defined_connections:
-            if source in subjects_found and target in subjects_found:
-                # Kanten-Dicke basiert auf dem Durchschnitt beider Fächer
-                avg_strength = (subjects_found[source] + subjects_found[target]) / 2
+            if source in subjects and target in subjects:
+                # Wenn beide Fächer existieren, Linie zeichnen
+                s1 = subjects[source]["score"]
+                s2 = subjects[target]["score"]
+                
+                # Dicke der Linie (Nur wenn Tests da sind, sonst dünn)
+                if s1 > 0 and s2 > 0:
+                    width = (s1 + s2) / 40 # Dicke Linie bei guten Noten
+                else:
+                    width = 1 # Dünne Linie bei reinen Lernfächern
+                    
                 edges.append({
                     "from": source, 
                     "to": target,
-                    "value": avg_strength / 10, # Dicke der Linie
-                    "color": {"color": "#999", "opacity": 0.5}
+                    "width": width,
+                    "color": {"color": "#999", "opacity": 0.4}
                 })
 
         return {"nodes": nodes, "edges": edges}
-
 
     # === KARTEIKARTEN ===
 
@@ -414,3 +450,40 @@ class UniversalLernBuddy:
                 "cards": json.loads(res[2])
             }
         return None
+
+# === LERNPLANER ===
+
+    def create_study_plan(self, username, subject, exam_date_str):
+        user_hash = self.db.get_user_hash(username)
+        
+        # Tage berechnen
+        try:
+            exam_date = datetime.strptime(exam_date_str, "%Y-%m-%d")
+            today = datetime.now()
+            days_left = (exam_date - today).days + 1
+            
+            if days_left <= 0: return {"error": "Das Datum liegt in der Vergangenheit!"}
+            if days_left > 60: return {"error": "Plan maximal für 60 Tage möglich."}
+        except: return {"error": "Ungültiges Datum"}
+
+        print(f"📅 Generiere Plan für {subject} ({days_left} Tage)...")
+        
+        # KI fragen
+        ai_res = self.ai.generate_study_plan(subject, days_left)
+        if not ai_res or 'plan' not in ai_res:
+            return {"error": "KI konnte keinen Plan erstellen."}
+            
+        # Plan speichern
+        self.db.save_study_plan(user_hash, subject, exam_date_str, ai_res['plan'])
+        return {"success": True, "plan": ai_res['plan']}
+
+    def get_user_study_plans(self, username):
+        user_hash = self.db.get_user_hash(username)
+        raw = self.db.get_study_plans(user_hash)
+        return [
+            {"id": r[0], "subject": r[1], "exam_date": r[2], "plan": json.loads(r[3])}
+            for r in raw
+        ]
+        
+    def delete_plan(self, username, plan_id):
+        return self.db.delete_study_plan(plan_id, self.db.get_user_hash(username))

@@ -172,3 +172,21 @@ class AIEngine:
         }}
         """
         return self._robust_api_call(prompt, response_format="json")
+
+    def generate_study_plan(self, subject, days_left):
+        prompt = f"""
+        Erstelle einen Lernplan für das Fach '{subject}'.
+        Zeit bis zur Klausur: {days_left} Tage.
+        
+        Erstelle für JEDEN Tag (Tag 1 bis Tag {days_left}) einen Eintrag.
+        Baue aufeinander auf: Erst Grundlagen, dann Vertiefung, am Ende Wiederholung.
+        
+        Antworte STRENG als JSON:
+        {{
+            "plan": [
+                {{ "day": 1, "topic": "...", "activity": "..." }},
+                {{ "day": 2, "topic": "...", "activity": "..." }}
+            ]
+        }}
+        """
+        return self._robust_api_call(prompt, response_format="json")
