@@ -622,6 +622,11 @@ async def delete_plan(plan_id: int, current_user: dict = Depends(get_current_use
     buddy.delete_plan(current_user['sub'], plan_id)
     return {"success": True}
 
+@app.get("/planner")
+async def serve_planner():
+    """📅 Serve Lernplan-Seite"""
+    return FileResponse("../frontend/planner.html")
+
 # === START-SKRIPT ===
 
 if __name__ == "__main__":
