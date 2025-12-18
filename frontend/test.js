@@ -135,6 +135,8 @@ function loadQuestion(index) {
     document.getElementById('finishBtn').classList.toggle('hidden', !isLast);
     
     currentQuestionIndex = index;
+
+    renderMath(document.querySelector('.question-container'));
 }
 
 function toggleOption(key) {
@@ -285,6 +287,8 @@ function renderResults(data) {
     
     // Scrollen nach oben
     window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    renderMath(container);
 }
 
 // === DIESE FUNKTION WAR VEREINFACHT, JETZT WIEDER VOLLSTÄNDIG ===

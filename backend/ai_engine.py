@@ -1,34 +1,172 @@
 """
-🧠 AI ENGINE
-Kapselt die Kommunikation mit der KI (OpenRouter / DeepSeek).
-Hier liegen die Prompts und die API-Logik.
+🧠 AI ENGINE (Hybrid: Cloud & Local)
+Kapselt die Kommunikation mit der KI.
+Unterstützt OpenRouter (Cloud) UND Ollama (Lokal via VPN).
 """
 
 import os
 import json
 import time
-import random
 import requests
 from dotenv import load_dotenv
+import sys
+import threading
+import ast
 
 load_dotenv()
 
 class AIEngine:
     def __init__(self):
-        self.api_key = os.getenv("OPENROUTER_API_KEY")
-        self.base_url = "https://openrouter.ai/api/v1/chat/completions"
-        self.model = "tngtech/deepseek-r1t2-chimera:free"
-        print("🤖 KI-Engine initialisiert")
+        # Wir lesen aus der .env, ob wir CLOUD oder LOCAL wollen
+        self.mode = os.getenv("AI_PROVIDER", "cloud").lower()
+        
+        if self.mode == "local":
+            # === LOKALER MODUS (Dein Monster-PC) ===
+            print(f"🏠 Nutze lokalen Heim-Server (Ollama)")
+            
+            # IP deines PCs im VPN (aus .env laden oder Fallback)
+            home_ip = os.getenv("OLLAMA_IP", "127.0.0.1") 
+            
+            # WICHTIG: Ollama ist OpenAI-Kompatibel unter /v1/chat/completions
+            self.base_url = f"http://{home_ip}:11434/v1/chat/completions"
+            self.api_key = "ollama" # Ollama braucht keinen echten Key
+            
+            # Wähle hier dein Modell: "llama3.1" (schnell) oder "llama3.1:70b" (schlau)
+            # Du kannst das auch in der .env steuern!
+            self.model = os.getenv("OLLAMA_MODEL", "llama3.1")
+            
+        else:
+            # === CLOUD MODUS (OpenRouter) ===
+            print("☁️ Nutze OpenRouter Cloud")
+            self.api_key = os.getenv("OPENROUTER_API_KEY")
+            self.base_url = "https://openrouter.ai/api/v1/chat/completions"
+            self.model = "tngtech/deepseek-r1t2-chimera:free"
 
+        print(f"🤖 KI-Engine geladen: {self.model} via {self.mode.upper()}")
+
+    def _robust_api_call(self, prompt, max_retries=2, response_format="text", timeout=60):
+        """Robust Request mit System-Prompt und aggressivem JSON-Fixing"""
+        
+        if not self.api_key and self.mode == "cloud":
+            print("❌ Kein API-Key")
+            return None
+            
+        headers = { "Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json" }
+        
+        # 1. SYSTEM PROMPT: Macht das Modell "gehorsam"
+        messages = [
+            {"role": "system", "content": "You are a strict JSON generator. Output ONLY valid JSON. No markdown, no intro text, no explanations."},
+            {"role": "user", "content": prompt}
+        ]
+
+        data = {
+            "model": self.model,
+            "messages": messages,
+            "temperature": 0.5 # Etwas kreativer als 0, aber strikter als 0.7
+        }
+
+        if response_format == "json":
+            if self.mode == "local":
+                data["format"] = "json"
+                data["stream"] = False
+            else:
+                data["response_format"] = {"type": "json_object"}
+
+        current_timeout = 180 if (self.mode == "local" and "70b" in self.model) else timeout
+
+        for attempt in range(max_retries):
+            try:
+                # --- LADEBALKEN ---
+                start_time = time.time()
+                stop_loading = threading.Event()
+                def loader():
+                    chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+                    i = 0
+                    while not stop_loading.is_set():
+                        sys.stdout.write(f"\r{chars[i]} KI arbeitet... ({time.time()-start_time:.1f}s)")
+                        sys.stdout.flush()
+                        time.sleep(0.1)
+                        i = (i + 1) % len(chars)
+                
+                t = threading.Thread(target=loader)
+                t.daemon = True
+                t.start()
+                
+                # REQUEST
+                resp = requests.post(self.base_url, headers=headers, json=data, timeout=current_timeout)
+                
+                stop_loading.set()
+                t.join()
+                
+                if resp.status_code == 200:
+                    result_json = resp.json()
+                    content = result_json['choices'][0]['message']['content']
+                    
+                    # Statistik (nur für Terminal-Show)
+                    duration = time.time() - start_time
+                    tps = (len(content)/3.5) / duration
+                    sys.stdout.write(f"\r🚀 FERTIG: {duration:.2f}s | {self.mode} | {tps:.1f} T/s\n")
+                    
+                    if response_format == "json":
+                        # === AGGRESSIVE REINIGUNG ===
+                        # 1. Markdown entfernen
+                        clean_content = content.replace("```json", "").replace("```", "").strip()
+                        
+                        try:
+                            # Versuch 1: Normales JSON
+                            return json.loads(clean_content)
+                        except:
+                            pass
+                            
+                        try:
+                            # Versuch 2: Suche nach { und } (falls Text davor/danach)
+                            start = clean_content.find('{')
+                            end = clean_content.rfind('}') + 1
+                            if start != -1 and end != -1:
+                                json_str = clean_content[start:end]
+                                return json.loads(json_str)
+                        except:
+                            pass
+                            
+                        try:
+                            # Versuch 3: Python Eval (Rettung für 'Single Quotes')
+                            # Lokale Modelle nutzen oft ' statt " -> Python versteht das, JSON nicht.
+                            return ast.literal_eval(clean_content)
+                        except Exception as e:
+                            print(f"\n⚠️ JSON-Rettung gescheitert: {e}")
+                            print(f"RAW: {clean_content[:100]}...")
+                            continue # Retry loop
+                            
+                    return content
+                else:
+                    stop_loading.set()
+                    print(f"\n❌ API Fehler {resp.status_code}: {resp.text}")
+                    
+            except Exception as e:
+                if 'stop_loading' in locals(): stop_loading.set()
+                print(f"\n⚠️ Fehler: {e}")
+                time.sleep(1)
+        
+        return None
+
+
+    # --- HIER FOLGEN DEINE GENERATOR-FUNKTIONEN (bleiben gleich) ---
+    # Kopiere einfach generate_exercises, generate_feedback, etc. hier rein.
+    # Sie nutzen alle self._robust_api_call, daher funktionieren sie automatisch!
+    
     def generate_exercises(self, subject, topic, count, context_info=""):
         """
         🎓 Generiert Übungen basierend auf Parametern
         """
-        prompt = f"""
+        prompt = fr"""
     ADAPTIVE LERNUNTERSTÜTZUNG:
     {context_info}
 
     Generiere {count} Multiple-Choice Fragen für {subject} zum Thema {topic}.
+
+    WICHTIG FÜR MATHE/PHYSIK:
+    Wenn du Formeln verwendest, schreibe sie im LaTeX-Format und umschließe sie IMMER mit einem Dollarzeichen $.
+    Beispiel: "Berechne $\\frac{{1}}{{2}}$" oder "Was ist $\\sqrt{{x}}$?"
     
     JSON-Format strikt einhalten: 
     {{
@@ -108,52 +246,11 @@ class AIEngine:
     """
         return self._robust_api_call(prompt, response_format="json")
 
-    def _robust_api_call(self, prompt, max_retries=2, response_format="text", timeout=30):
-        """Interne Methode für den eigentlichen Request mit Retry-Logik"""
-        if not self.api_key:
-            print("❌ Kein API-Key konfiguriert")
-            return None
-            
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://github.com/universal-lern-buddy",
-            "X-Title": "Universal Lern-Buddy"
-        }
-        
-        data = {
-            "model": self.model,
-            "messages": [{"role": "user", "content": prompt}],
-        }
-        
-        if response_format == "json":
-            data["response_format"] = {"type": "json_object"}
-            
-        for attempt in range(max_retries):
-            try:
-                resp = requests.post(self.base_url, headers=headers, json=data, timeout=timeout)
-                if resp.status_code == 200:
-                    content = resp.json()['choices'][0]['message']['content']
-                    if response_format == "json":
-                        try:
-                            return json.loads(content)
-                        except json.JSONDecodeError:
-                            print(f"⚠️ JSON-Fehler in Antwort: {content[:50]}...")
-                            continue
-                    return content
-                else:
-                    print(f"⚠️ API Fehler {resp.status_code}: {resp.text}")
-            except Exception as e:
-                print(f"⚠️ Netzwerkfehler Versuch {attempt+1}: {e}")
-                time.sleep(1 + attempt) # Kurze Pause vor Retry
-        
-        return None
-
     def generate_flashcards(self, subject, topic, count=5):
         """
         🃏 Generiert Lern-Karteikarten (Vorderseite/Rückseite)
         """
-        prompt = f"""
+        prompt = fr"""
         LERN-KARTEIKARTEN GENERATOR:
         Fach: {subject}
         Thema: {topic}
@@ -162,6 +259,10 @@ class AIEngine:
         Erstelle Karteikarten zum effektiven Lernen.
         - Vorderseite: Ein wichtiger Begriff, eine kurze Frage oder eine Formel.
         - Rückseite: Die prägnante Definition, Antwort oder Lösung (max 2-3 Sätze).
+
+        WICHTIG FÜR MATHE/PHYSIK:
+        Wenn du Formeln verwendest, schreibe sie im LaTeX-Format und umschließe sie IMMER mit einem Dollarzeichen $.
+        Beispiel: "Berechne $\\frac{{1}}{{2}}$" oder "Was ist $\\sqrt{{x}}$?"
 
         Antworte STRENG als JSON:
         {{

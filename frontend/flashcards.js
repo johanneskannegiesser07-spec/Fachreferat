@@ -83,6 +83,7 @@ function showCard(index) {
         document.getElementById('cardFrontText').textContent = cards[index].front;
         document.getElementById('cardBackText').textContent = cards[index].back;
         document.getElementById('counter').textContent = `${index + 1} / ${cards.length}`;
+        renderMath('currentCard');
     }, 150);
 }
 

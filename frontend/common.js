@@ -109,3 +109,25 @@ function toggleDebug() {
     const debugDiv = document.getElementById('debug');
     if (debugDiv) debugDiv.style.display = debugEnabled ? 'block' : 'none';
 }
+
+// === MATHE RENDERING (KaTeX) ===
+function renderMath(elementIdOrObj) {
+    // Falls KaTeX noch nicht geladen ist (z.B. beim schnellen Wechsel), Abbruch
+    if (!window.renderMathInElement) return;
+
+    const element = typeof elementIdOrObj === 'string' 
+        ? document.getElementById(elementIdOrObj) 
+        : elementIdOrObj;
+
+    if (element) {
+        renderMathInElement(element, {
+            delimiters: [
+                {left: "$$", right: "$$", display: true},  // Große Formeln
+                {left: "$", right: "$", display: false},   // Formeln im Fließtext
+                {left: "\\(", right: "\\)", display: false},
+                {left: "\\[", right: "\\]", display: true}
+            ],
+            throwOnError: false
+        });
+    }
+}
