@@ -627,6 +627,78 @@ async def serve_planner():
     """📅 Serve Lernplan-Seite"""
     return FileResponse("../frontend/planner.html")
 
+# --- NOTEN VERWALTUNG ---
+
+@app.route('/api/grades/add', methods=['POST'])
+def add_grade():
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.json
+    # Erwartet: { "subject": "Mathe", "value": 3.0, "type": "ex", "weight": 1.0 }
+    
+    conn = get_db_connection()
+    conn.execute(
+        'INSERT INTO grades (user_id, subject, grade_value, grade_type, weight) VALUES (?, ?, ?, ?, ?)',
+        (session['user_id'], data['subject'], data['value'], data['type'], data['weight'])
+    )
+    conn.commit()
+    conn.close()
+    
+    # --- AGENT TRIGGER (Optional für später) ---
+    # Hier könnte die KI sofort prüfen: "Oh, eine 5? Soll ich Lernmaterial erstellen?"
+    
+    return jsonify({"success": True, "message": "Note gespeichert"})
+
+@app.route('/api/grades/overview', methods=['GET'])
+def get_grades_overview():
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    conn = get_db_connection()
+    
+    # Hole alle Noten des Users
+    grades = conn.execute('SELECT * FROM grades WHERE user_id = ? ORDER BY date DESC', (session['user_id'],)).fetchall()
+    
+    # Hole User-Profil (für Klasse/Schulart)
+    user = conn.execute('SELECT class_level FROM users WHERE id = ?', (session['user_id'],)).fetchone()
+    conn.close()
+    
+    # Berechne Schnitt pro Fach
+    subjects = {}
+    for g in grades:
+        fach = g['subject']
+        if fach not in subjects:
+            subjects[fach] = {'grades': [], 'total_weighted': 0, 'sum_weights': 0}
+            
+        subjects[fach]['grades'].append({
+            'value': g['grade_value'],
+            'type': g['grade_type'],
+            'date': g['date']
+        })
+        
+        # Durchschnitt berechnen (Note * Gewichtung)
+        subjects[fach]['total_weighted'] += g['grade_value'] * g['weight']
+        subjects[fach]['sum_weights'] += g['weight']
+
+    # Finalen Durchschnitt berechnen
+    overview = []
+    for fach, data in subjects.items():
+        avg = 0
+        if data['sum_weights'] > 0:
+            avg = data['total_weighted'] / data['sum_weights']
+            
+        overview.append({
+            'subject': fach,
+            'average': round(avg, 2),
+            'count': len(data['grades'])
+        })
+        
+    return jsonify({
+        "overview": overview, 
+        "system": "points" if user and "11" in str(user['class_level']) or "12" in str(user['class_level']) else "grades"
+    })
+
 # === START-SKRIPT ===
 
 if __name__ == "__main__":

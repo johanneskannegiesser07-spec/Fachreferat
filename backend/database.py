@@ -182,6 +182,20 @@ class DatabaseManager:
                     FOREIGN KEY (user_hash) REFERENCES user_profiles (user_hash)
                 )
             ''')
+
+            # 11. Tabelle für Noten
+            curser.execute('''
+                CREATE TABLE IF NOT EXISTS grades (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    subject TEXT NOT NULL,
+                    grade_value REAL NOT NULL,    -- Die Note (z.B. 2.5 oder 11.0)
+                    grade_type TEXT NOT NULL,     -- 'schriftlich', 'muendlich', 'ex'
+                    weight REAL DEFAULT 1.0,      -- Gewichtung (z.B. Schulaufgabe = 2.0)
+                    date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users (id)
+                )
+            ''')
             
             conn.commit()
             print("✅ Datenbank: Tabellen initialisiert")
