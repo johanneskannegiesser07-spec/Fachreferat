@@ -159,30 +159,26 @@ class AIEngine:
         🎓 Generiert Übungen basierend auf Parametern
         """
         prompt = fr"""
-    ADAPTIVE LERNUNTERSTÜTZUNG:
-    {context_info}
+        ADAPTIVE LERNUNTERSTÜTZUNG:
+        Kontext/Notenlage: {context_info}
 
-    Generiere {count} Multiple-Choice Fragen für {subject} zum Thema {topic}.
+        Generiere {count} Multiple-Choice Fragen für {subject} zum Thema {topic}.
+        Passe die Schwierigkeit an die Notenlage an! (Schlechte Noten -> Einfacherer Einstieg).
 
-    WICHTIG FÜR MATHE/PHYSIK:
-    Wenn du Formeln verwendest, schreibe sie im LaTeX-Format und umschließe sie IMMER mit einem Dollarzeichen $.
-    Beispiel: "Berechne $\\frac{{1}}{{2}}$" oder "Was ist $\\sqrt{{x}}$?"
-    
-    JSON-Format strikt einhalten: 
-    {{
-        "exercises": [
-            {{
-                "question": "...", 
-                "options": {{"A": "...", "B": "...", "C": "...", "D": "..."}}, 
-                "correct_answers": ["A", "C"], 
-                "explanation": "...",
-                "difficulty": "mittel"
-            }}
-        ],
-        "adaptive_tips": ["Tipp 1", "Tipp 2"]
-    }}
-    Wichtig: Es können mehrere Antworten richtig sein. Kennzeichne das in 'correct_answers'.
-    """
+        JSON-Format strikt einhalten: 
+        {{
+            "exercises": [
+                {{
+                    "question": "...", 
+                    "options": {{"A": "...", "B": "...", "C": "...", "D": "..."}}, 
+                    "correct_answers": ["A"], 
+                    "explanation": "...",
+                    "difficulty": "mittel"
+                }}
+            ],
+            "adaptive_tips": ["Tipp 1"]
+        }}
+        """
         return self._robust_api_call(prompt, response_format="json")
 
     def generate_feedback(self, subject, topic, score, correct, total):
@@ -255,20 +251,22 @@ class AIEngine:
         Fach: {subject}
         Thema: {topic}
         Anzahl: {count}
-
-        Erstelle Karteikarten zum effektiven Lernen.
-        - Vorderseite: Ein wichtiger Begriff, eine kurze Frage oder eine Formel.
-        - Rückseite: Die prägnante Definition, Antwort oder Lösung (max 2-3 Sätze).
-
+        
+        SCHÜLER-KONTEXT (Noten):
+        {grades_context}
+        
+        ANWEISUNG:
+        Erstelle Karteikarten. 
+        - Wenn die Noten in diesem Fach SCHLECHT sind: Fokus auf Grundlagen, einfache Definitionen, Verständnis.
+        - Wenn die Noten GUT sind: Fokus auf Details, Transferwissen, schwere Fragen.
+        
         WICHTIG FÜR MATHE/PHYSIK:
-        Wenn du Formeln verwendest, schreibe sie im LaTeX-Format und umschließe sie IMMER mit einem Dollarzeichen $.
-        Beispiel: "Berechne $\\frac{{1}}{{2}}$" oder "Was ist $\\sqrt{{x}}$?"
+        Formeln in LaTeX mit Dollarzeichen $. Bsp: "$\frac{{1}}{{2}}$".
 
         Antworte STRENG als JSON:
         {{
             "flashcards": [
-                {{ "front": "Begriff/Frage", "back": "Erklärung/Antwort" }},
-                {{ "front": "...", "back": "..." }}
+                {{ "front": "Begriff/Frage", "back": "Erklärung/Antwort" }}
             ]
         }}
         """
@@ -288,6 +286,36 @@ class AIEngine:
                 {{ "day": 1, "topic": "...", "activity": "..." }},
                 {{ "day": 2, "topic": "...", "activity": "..." }}
             ]
+        }}
+        """
+        return self._robust_api_call(prompt, response_format="json")
+
+    # Analyse der Noten
+
+    def analyze_grades(self, grades_list, school_type="Gymnasium"):
+        """
+        📊 Analysiert Noten und gibt strategische Tipps.
+        grades_list ist eine Liste von dicts: [{'subject': 'Mathe', 'value': 4.5, ...}]
+        """
+        prompt = f"""
+        Du bist der strategische Lern-Coach. 
+        Analysiere die aktuellen Noten eines Schülers ({school_type}).
+        
+        NOTEN:
+        {json.dumps(grades_list, indent=2)}
+        
+        AUFGABE:
+        1. Identifiziere "Problemfächer" (Noten schlechter als 4 oder < 5 Punkte).
+        2. Identifiziere "Stärken".
+        3. Gib für die Problemfächer eine SOFORTIGE Handlungsempfehlung.
+        
+        Antworte als JSON:
+        {{
+            "analysis_text": "Dein motivierender Kommentar zum Gesamtbild (max 2 Sätze).",
+            "alerts": [
+                {{ "subject": "Fach", "issue": "Note 5", "advice": "Konkreter Lerntipp für dieses Fach" }}
+            ],
+            "praise": "Lob für gute Fächer"
         }}
         """
         return self._robust_api_call(prompt, response_format="json")

@@ -105,15 +105,22 @@ class UniversalLernBuddy:
     # === ÜBUNGEN & TEST MODUS ===
 
     def generate_personalized_exercises(self, username, subject, topic, count=3):
-        # Versuche KI-Generierung
-        exercises = self.ai.generate_exercises(subject, topic, count)
+        # ... (User Hash holen) ...
+        user_hash = self.db.get_user_hash(username) # Zeile evtl hinzufügen falls nicht da
         
-        if exercises:
-            return exercises
-            
-        # Fallback wenn KI scheitert
-        return self._get_mc_multiple_fallback_exercises(subject, topic, count)
+        # Noten holen (ähnlich wie oben)
+        grades = self.db.get_grades(user_hash)
+        subj_grades = [float(g[2]) for g in grades if g[1].lower() == subject.lower()]
+        context = ""
+        if subj_grades:
+            avg = sum(subj_grades) / len(subj_grades)
+            context = f"Der Schüler steht in {subject} auf {avg:.2f}. Passe die Härte an."
 
+        exercises = self.ai.generate_exercises(subject, topic, count, context_info=context)
+        
+        if exercises: return exercises
+        return self._get_mc_multiple_fallback_exercises(subject, topic, count)
+        
     def start_test_session(self, username, subject, topic, count=10):
         user_hash = self.db.get_user_hash(username)
         test_id = f"test_{int(time.time())}_{user_hash}"
@@ -409,24 +416,31 @@ class UniversalLernBuddy:
 
     def start_flashcard_session(self, username, subject, topic, count=10):
         user_hash = self.db.get_user_hash(username)
-        print(f"🃏 Generiere Karteikarten für {subject}...")
         
-        # KI Generierung
-        cards_data = self.ai.generate_flashcards(subject, topic, count)
+        # --- NEU: Noten-Kontext bauen ---
+        grades = self.db.get_grades(user_hash) # Holt alle Noten
+        relevant_grade = "Keine Note bekannt"
+        
+        # Wir suchen die Note für das spezifische Fach (oder Durchschnitt)
+        subj_grades = [float(g[2]) for g in grades if g[1].lower() == subject.lower()]
+        if subj_grades:
+            avg = sum(subj_grades) / len(subj_grades)
+            relevant_grade = f"Durchschnittsnote in {subject}: {avg:.2f}"
+        
+        print(f"🃏 Generiere Karteikarten für {subject} (Kontext: {relevant_grade})...")
+        
+        # KI Generierung mit Context
+        cards_data = self.ai.generate_flashcards(subject, topic, count, grades_context=relevant_grade)
         
         if not cards_data or 'flashcards' not in cards_data:
             cards_data = {
                 "flashcards": [{"front": "Fehler", "back": "Konnte keine Karten generieren."}]
             }
         
-        # SPEICHERN IN DB
         set_id = self.db.save_flashcard_set(user_hash, subject, topic, cards_data['flashcards'])
             
         return {
-            "set_id": set_id,
-            "subject": subject,
-            "topic": topic,
-            "cards": cards_data['flashcards']
+            "set_id": set_id, "subject": subject, "topic": topic, "cards": cards_data['flashcards']
         }
 
     def get_flashcard_history(self, username):
@@ -487,3 +501,61 @@ class UniversalLernBuddy:
         
     def delete_plan(self, username, plan_id):
         return self.db.delete_study_plan(plan_id, self.db.get_user_hash(username))
+
+# === NOTEN & FÄCHER VERWALTUNG ===
+
+    def add_grade(self, username, subject, value, grade_type, weight):
+        """Leitet das Speichern einer Note an die DB weiter"""
+        user_hash = self.db.get_user_hash(username)
+        # Achtung: Stelle sicher, dass add_grade in database.py existiert!
+        return self.db.add_grade(user_hash, subject, value, grade_type, weight)
+
+    def get_grades(self, username):
+        """Holt Noten aus der DB"""
+        user_hash = self.db.get_user_hash(username)
+        return self.db.get_grades(user_hash)
+
+    def add_custom_subject(self, username, subject):
+        """Fügt ein neues Fach hinzu"""
+        user_hash = self.db.get_user_hash(username)
+        return self.db.add_custom_subject(user_hash, subject)
+
+    def analyze_user_grades(self, username):
+        """
+        Holt Noten aus der DB, bereitet sie auf und 
+        fragt die KI nach einer Analyse.
+        """
+        user_hash = self.db.get_user_hash(username)
+        
+        # 1. Noten holen (Rohe DB-Daten: Tuples)
+        raw_grades = self.db.get_grades(user_hash)
+        
+        # 2. In schönes Format für die KI umwandeln
+        # DB liefert meist: (id, subject, value, type, weight, date)
+        grades_list = []
+        for g in raw_grades:
+            grades_list.append({
+                "subject": g[1],
+                "value": float(g[2]),
+                "type": g[3],
+                "date": str(g[5])
+            })
+            
+        # 3. Schulkontext holen (für Schulart, z.B. Gymnasium vs Realschule)
+        context = self.get_school_context(username)
+        school_type = context.get('school_type', 'Allgemein')
+
+        # 4. KI fragen (Methode muss in ai_engine.py existieren!)
+        if hasattr(self.ai, 'analyze_grades'):
+            return self.ai.analyze_grades(grades_list, school_type)
+        else:
+            return {
+                "analysis_text": "KI-Funktion 'analyze_grades' noch nicht implementiert.",
+                "alerts": [],
+                "praise": ""
+            }
+
+    # Methode zum Löschen (am Ende der Klasse):
+    def delete_grade(self, username, grade_id):
+        user_hash = self.db.get_user_hash(username)
+        return self.db.delete_grade(grade_id, user_hash)

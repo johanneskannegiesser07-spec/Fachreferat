@@ -183,17 +183,17 @@ class DatabaseManager:
                 )
             ''')
 
-            # 11. Tabelle für Noten
-            curser.execute('''
+            # 11. Tabelle für Noten (KORRIGIERT & ANGEPASST)
+            cursor.execute('''
                 CREATE TABLE IF NOT EXISTS grades (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
+                    user_hash TEXT NOT NULL,     -- Geändert auf user_hash für Konsistenz
                     subject TEXT NOT NULL,
-                    grade_value REAL NOT NULL,    -- Die Note (z.B. 2.5 oder 11.0)
-                    grade_type TEXT NOT NULL,     -- 'schriftlich', 'muendlich', 'ex'
-                    weight REAL DEFAULT 1.0,      -- Gewichtung (z.B. Schulaufgabe = 2.0)
+                    grade_value REAL NOT NULL,
+                    grade_type TEXT NOT NULL,    -- 'schulaufgabe', 'ex', 'muendlich'
+                    weight REAL DEFAULT 1.0,
                     date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (user_id) REFERENCES users (id)
+                    FOREIGN KEY (user_hash) REFERENCES user_profiles (user_hash)
                 )
             ''')
             
@@ -522,6 +522,80 @@ class DatabaseManager:
         conn = self.get_connection()
         try:
             conn.execute('DELETE FROM study_plans WHERE id = ? AND user_hash = ?', (plan_id, user_hash))
+            conn.commit()
+            return True
+        finally:
+            conn.close()
+
+    # === NOTEN & FÄCHER ===
+
+    def add_grade(self, user_hash, subject, grade_value, grade_type, weight):
+        conn = self.get_connection()
+        try:
+            conn.execute('''
+                INSERT INTO grades (user_hash, subject, grade_value, grade_type, weight)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (user_hash, subject, grade_value, grade_type, weight))
+            conn.commit()
+            return True
+        finally:
+            conn.close()
+
+    def get_grades(self, user_hash):
+        conn = self.get_connection()
+        try:
+            return conn.execute('''
+                SELECT id, subject, grade_value, grade_type, weight, date 
+                FROM grades WHERE user_hash = ? ORDER BY date DESC
+            ''', (user_hash,)).fetchall()
+        finally:
+            conn.close()
+
+    def add_custom_subject(self, user_hash, new_subject):
+        """Fügt ein neues Fach zur Schulliste hinzu (JSON-safe)"""
+        conn = self.get_connection()
+        try:
+            # 1. Hole aktuelle Daten
+            row = conn.execute('SELECT subjects FROM school_contexts WHERE user_hash = ?', (user_hash,)).fetchone()
+            if not row:
+                return False 
+            
+            current_subjects_raw = row[0]
+            current_list = []
+
+            # 2. Versuche JSON zu parsen (mit Fallback für kaputte Daten)
+            try:
+                if current_subjects_raw:
+                    current_list = json.loads(current_subjects_raw)
+            except json.JSONDecodeError:
+                # Fallback: Falls Daten korrupt sind (z.B. "[],NeuesFach"), als String behandeln
+                # Wir bereinigen das Chaos hier
+                clean_text = str(current_subjects_raw).replace('[', '').replace(']', '').replace('"', '').replace("'", "")
+                current_list = [s.strip() for s in clean_text.split(',') if s.strip()]
+
+            # Sicherstellen, dass es wirklich eine Liste ist
+            if not isinstance(current_list, list):
+                current_list = []
+
+            # 3. Neues Fach hinzufügen
+            if new_subject not in current_list:
+                current_list.append(new_subject)
+                
+                # 4. WICHTIG: Als valides JSON speichern!
+                new_json = json.dumps(current_list)
+                
+                conn.execute('UPDATE school_contexts SET subjects = ? WHERE user_hash = ?', (new_json, user_hash))
+                conn.commit()
+                return True
+            return False 
+        finally:
+            conn.close()
+    
+    def delete_grade(self, grade_id, user_hash):
+        conn = self.get_connection()
+        try:
+            # Wir prüfen user_hash, damit man nicht Noten anderer löschen kann
+            conn.execute('DELETE FROM grades WHERE id = ? AND user_hash = ?', (grade_id, user_hash))
             conn.commit()
             return True
         finally:

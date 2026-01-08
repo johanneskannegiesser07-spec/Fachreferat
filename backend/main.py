@@ -100,6 +100,15 @@ class UserProfileUpdate(BaseModel):
 class RetakeRequest(BaseModel):
     test_id: str
 
+class GradeEntry(BaseModel):
+    subject: str
+    value: float
+    type: str  # 'exam', 'oral', 'test'
+    weight: float = 1.0
+
+class NewSubject(BaseModel):
+    subject: str
+
 # === AUTHENTIFIZIERUNG ===
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -629,75 +638,53 @@ async def serve_planner():
 
 # --- NOTEN VERWALTUNG ---
 
-@app.route('/api/grades/add', methods=['POST'])
-def add_grade():
-    if 'user_id' not in session:
-        return jsonify({"error": "Unauthorized"}), 401
+@app.post("/api/grades")
+async def add_grade(entry: GradeEntry, current_user: dict = Depends(get_current_user)):
+    """📝 Fügt eine neue Note hinzu"""
+    if not buddy: raise HTTPException(status_code=500)
     
-    data = request.json
-    # Erwartet: { "subject": "Mathe", "value": 3.0, "type": "ex", "weight": 1.0 }
-    
-    conn = get_db_connection()
-    conn.execute(
-        'INSERT INTO grades (user_id, subject, grade_value, grade_type, weight) VALUES (?, ?, ?, ?, ?)',
-        (session['user_id'], data['subject'], data['value'], data['type'], data['weight'])
+    success = buddy.add_grade(
+        current_user['sub'], 
+        entry.subject, 
+        entry.value, 
+        entry.type, 
+        entry.weight
     )
-    conn.commit()
-    conn.close()
-    
-    # --- AGENT TRIGGER (Optional für später) ---
-    # Hier könnte die KI sofort prüfen: "Oh, eine 5? Soll ich Lernmaterial erstellen?"
-    
-    return jsonify({"success": True, "message": "Note gespeichert"})
+    return {"success": success, "message": "Note gespeichert"}
 
-@app.route('/api/grades/overview', methods=['GET'])
-def get_grades_overview():
-    if 'user_id' not in session:
-        return jsonify({"error": "Unauthorized"}), 401
-        
-    conn = get_db_connection()
+@app.get("/api/grades")
+async def get_grades(current_user: dict = Depends(get_current_user)):
+    """📊 Holt Notenübersicht"""
+    if not buddy: raise HTTPException(status_code=500)
     
-    # Hole alle Noten des Users
-    grades = conn.execute('SELECT * FROM grades WHERE user_id = ? ORDER BY date DESC', (session['user_id'],)).fetchall()
-    
-    # Hole User-Profil (für Klasse/Schulart)
-    user = conn.execute('SELECT class_level FROM users WHERE id = ?', (session['user_id'],)).fetchone()
-    conn.close()
-    
-    # Berechne Schnitt pro Fach
-    subjects = {}
-    for g in grades:
-        fach = g['subject']
-        if fach not in subjects:
-            subjects[fach] = {'grades': [], 'total_weighted': 0, 'sum_weights': 0}
-            
-        subjects[fach]['grades'].append({
-            'value': g['grade_value'],
-            'type': g['grade_type'],
-            'date': g['date']
-        })
-        
-        # Durchschnitt berechnen (Note * Gewichtung)
-        subjects[fach]['total_weighted'] += g['grade_value'] * g['weight']
-        subjects[fach]['sum_weights'] += g['weight']
+    grades = buddy.get_grades(current_user['sub'])
+    return {"success": True, "data": grades}
 
-    # Finalen Durchschnitt berechnen
-    overview = []
-    for fach, data in subjects.items():
-        avg = 0
-        if data['sum_weights'] > 0:
-            avg = data['total_weighted'] / data['sum_weights']
-            
-        overview.append({
-            'subject': fach,
-            'average': round(avg, 2),
-            'count': len(data['grades'])
-        })
-        
-    return jsonify({
-        "overview": overview, 
-        "system": "points" if user and "11" in str(user['class_level']) or "12" in str(user['class_level']) else "grades"
-    })
+@app.post("/api/subjects")
+async def add_subject(entry: NewSubject, current_user: dict = Depends(get_current_user)):
+    """➕ Fügt ein benutzerdefiniertes Fach hinzu"""
+    if not buddy: raise HTTPException(status_code=500)
+    
+    success = buddy.add_custom_subject(current_user['sub'], entry.subject)
+    return {"success": success, "message": f"Fach '{entry.subject}' hinzugefügt"}
+
+@app.post("/api/analyze-grades")
+async def analyze_grades(current_user: dict = Depends(get_current_user)):
+    """🤖 KI analysiert die Noten"""
+    if not buddy: raise HTTPException(status_code=500)
+    
+    analysis = buddy.analyze_user_grades(current_user['sub'])
+    return {"success": True, "data": analysis}
+
+# Irgendwo bei den Noten-Endpoints hinzufügen:
+
+@app.delete("/api/grades/{grade_id}")
+async def delete_grade(grade_id: int, current_user: dict = Depends(get_current_user)):
+    """🗑️ Löscht eine Note"""
+    if not buddy: raise HTTPException(status_code=500)
+    
+    success = buddy.delete_grade(current_user['sub'], grade_id)
+    return {"success": success}
 
 # === START-SKRIPT ===
 

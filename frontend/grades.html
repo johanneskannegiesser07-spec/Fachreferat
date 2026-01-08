@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 Notenverwaltung - KI-Lern-Buddy</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .grade-badge {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            line-height: 40px;
+            border-radius: 50%;
+            text-align: center;
+            font-weight: bold;
+            color: white;
+            margin-right: 10px;
+        }
+        .grade-good { background-color: #28a745; }
+        .grade-ok { background-color: #ffc107; color: #333; }
+        .grade-bad { background-color: #dc3545; }
+        
+        .add-subject-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Meine Noten</h1>
+            <p>Tracke deinen Erfolg und lass dir von der KI helfen!</p>
+            <div style="margin-top: 10px;">
+                <button onclick="window.location.href='/'" class="secondary">⬅️ Zurück zum Dashboard</button>
+            </div>
+        </header>
+
+        <div class="card">
+            <h2>➕ Neue Note eintragen</h2>
+            <div class="form-group">
+                <label>Fach:</label>
+                <div style="display: flex; gap: 10px;">
+                    <select id="subjectSelect" style="flex-grow: 1;">
+                        <option value="">Lade Fächer...</option>
+                    </select>
+                </div>
+                
+                <div class="add-subject-row">
+                    <input type="text" id="newSubjectInput" placeholder="Anderes Fach hinzufügen..." style="flex-grow: 1;">
+                    <button onclick="addNewSubject()" class="secondary" style="width: auto;">Fach hinzufügen</button>
+                </div>
+            </div>
+
+            <div class="form-group" style="display: flex; gap: 10px; align-items: flex-end;">
+                <div style="flex: 1;">
+                    <label>Note (Wert):</label>
+                    <input type="number" id="gradeValue" step="0.1" placeholder="z.B. 2.5 oder 11">
+                </div>
+                <div style="flex: 1;">
+                    <label>Art:</label>
+                    <select id="gradeType">
+                        <option value="schulaufgabe">Schulaufgabe (Groß)</option>
+                        <option value="ex">Stegreifaufgabe/Ex (Klein)</option>
+                        <option value="muendlich">Mündlich</option>
+                    </select>
+                </div>
+            </div>
+            
+            <button onclick="saveGrade()" class="success">💾 Note speichern</button>
+        </div>
+
+        <div id="aiAnalysisBox" class="card" style="display: none; background: #f8f9fa; border-left: 5px solid #6f42c1;">
+            <h2>🤖 KI-Coach Analyse</h2>
+            <p id="aiText">Analysiere...</p>
+            <div id="aiTips"></div>
+        </div>
+
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>📜 Notenspiegel</h2>
+                <button onclick="triggerAIAnalysis()" style="font-size: 0.8rem; background: #6f42c1;">🤖 KI-Analyse jetzt starten</button>
+            </div>
+            <div id="gradesList">
+                <p>Lade Noten...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/common.js"></script>
+    <script src="/static/grades.js"></script>
+</body>
+</html>
