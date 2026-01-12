@@ -196,6 +196,20 @@ class DatabaseManager:
                     FOREIGN KEY (user_hash) REFERENCES user_profiles (user_hash)
                 )
             ''')
+
+            # 12. Schul-Materialien / Wissensbasis
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS school_materials (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_hash TEXT NOT NULL,
+                    subject TEXT NOT NULL,
+                    topic TEXT,
+                    original_filename TEXT,
+                    extracted_summary TEXT,  -- Das ist das Gold: Was die KI verstanden hat
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_hash) REFERENCES user_profiles (user_hash)
+                )
+            ''')
             
             conn.commit()
             print("✅ Datenbank: Tabellen initialisiert")
@@ -598,5 +612,31 @@ class DatabaseManager:
             conn.execute('DELETE FROM grades WHERE id = ? AND user_hash = ?', (grade_id, user_hash))
             conn.commit()
             return True
+        finally:
+            conn.close()
+
+    # === MATERIAL & WISSEN ===
+
+    def save_material_summary(self, user_hash, subject, topic, filename, summary):
+        conn = self.get_connection()
+        try:
+            conn.execute('''
+                INSERT INTO school_materials (user_hash, subject, topic, original_filename, extracted_summary)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (user_hash, subject, topic, filename, summary))
+            conn.commit()
+            return True
+        finally:
+            conn.close()
+
+    def get_subject_materials(self, user_hash, subject, limit=3):
+        """Holt die neuesten Zusammenfassungen für ein Fach"""
+        conn = self.get_connection()
+        try:
+            return conn.execute('''
+                SELECT extracted_summary FROM school_materials 
+                WHERE user_hash = ? AND subject = ? 
+                ORDER BY created_at DESC LIMIT ?
+            ''', (user_hash, subject, limit)).fetchall()
         finally:
             conn.close()

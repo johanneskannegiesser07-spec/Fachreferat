@@ -319,3 +319,28 @@ class AIEngine:
         }}
         """
         return self._robust_api_call(prompt, response_format="json")
+
+    def analyze_document_text(self, raw_text, subject):
+        """
+        📄 Liest rohen Text (aus PDF) und erstellt eine Wissens-Zusammenfassung.
+        """
+        # Text kürzen, falls PDF riesig ist (Sicherheitsnetz)
+        safe_text = raw_text[:8000] 
+        
+        prompt = f"""
+        ANALYSE SCHULMATERIAL ({subject}):
+        
+        Du bist ein intelligenter Assistent, der Schulunterlagen für eine Datenbank zusammenfasst.
+        
+        INPUT TEXT:
+        "{safe_text}..."
+        
+        AUFGABE:
+        Erstelle eine extrem dichte Zusammenfassung der wichtigsten Fakten, Definitionen und Formeln.
+        Ignoriere Füllwörter. Das Ziel ist, dass eine KI später basierend hierauf Prüfungsfragen erstellen kann.
+        
+        FORMAT (Plain Text, keine Markdown-Überschriften):
+        Thema: [Thema nennen] | Kernkonzepte: [Konzept 1, Konzept 2] | Wichtige Details: [Fakten...]
+        """
+        # Hier reicht einfacher Text als Antwort
+        return self._robust_api_call(prompt, response_format="text")

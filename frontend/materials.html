@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>📄 Material Upload</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📄 Unterlagen hochladen</h1>
+            <p>Füttere den Lern-Buddy mit deinem Schulstoff!</p>
+            <button onclick="window.location.href='/'" class="secondary">Zurück</button>
+        </header>
+
+        <div class="card">
+            <h2>Neues PDF hochladen</h2>
+            <div class="form-group">
+                <label>Fach:</label>
+                <select id="subjectSelect">
+                    </select>
+                
+                <label style="margin-top: 15px;">Datei (PDF):</label>
+                <input type="file" id="fileInput" accept=".pdf">
+                
+                <button onclick="uploadFile()" class="success" id="uploadBtn" style="margin-top: 15px;">
+                    🚀 Analysieren & Speichern
+                </button>
+            </div>
+            <div id="status"></div>
+        </div>
+    </div>
+
+    <script src="/static/common.js"></script>
+    <script>
+        // Kleines Inline-Script für den Upload
+        document.addEventListener('DOMContentLoaded', async () => {
+            await checkAuthentication();
+            loadSubjects();
+        });
+
+        async function loadSubjects() {
+            const res = await apiCall('/api/school-context');
+            const sel = document.getElementById('subjectSelect');
+            if(res.data && res.data.subjects) {
+                // Hier gleiche Logik wie bei grades.js nutzen um String/Array zu parsen
+                let subjs = res.data.subjects; 
+                if(typeof subjs === 'string') subjs = subjs.split(',');
+                subjs.forEach(s => {
+                    let opt = document.createElement('option');
+                    opt.value = s.trim();
+                    opt.innerText = s.trim();
+                    sel.appendChild(opt);
+                });
+            }
+        }
+
+        async function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const subject = document.getElementById('subjectSelect').value;
+            
+            if(fileInput.files.length === 0) return alert("Bitte Datei wählen!");
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            
+            // WICHTIG: Query Parameter für subject nutzen
+            const url = `/api/upload-material?subject=${encodeURIComponent(subject)}`;
+            
+            document.getElementById('status').innerHTML = '<p>⏳ Lese PDF & frage KI... (kann dauern)</p>';
+            document.getElementById('uploadBtn').disabled = true;
+
+            try {
+                // Hier nutzen wir fetch direkt, da apiCall meist JSON erwartet, wir aber FormData senden
+                const token = localStorage.getItem('token');
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }, // KEIN Content-Type Header bei FormData!
+                    body: formData
+                });
+                
+                const result = await response.json();
+                if(result.success) {
+                    document.getElementById('status').innerHTML = `
+                        <p style="color:green;">✅ Fertig!</p>
+                        <div style="background:#eee; padding:10px; font-size:0.8em; margin-top:5px;">
+                            <strong>KI-Zusammenfassung:</strong><br>
+                            ${result.summary_preview}
+                        </div>`;
+                } else {
+                    document.getElementById('status').innerText = 'Fehler: ' + result.detail;
+                }
+            } catch(e) {
+                document.getElementById('status').innerText = 'Upload Fehler.';
+                console.error(e);
+            }
+            document.getElementById('uploadBtn').disabled = false;
+        }
+    </script>
+</body>
+</html>

@@ -104,23 +104,60 @@ class UniversalLernBuddy:
 
     # === ÜBUNGEN & TEST MODUS ===
 
+# in backend/universal_lern_buddy.py
+
     def generate_personalized_exercises(self, username, subject, topic, count=3):
-        # ... (User Hash holen) ...
-        user_hash = self.db.get_user_hash(username) # Zeile evtl hinzufügen falls nicht da
+        """
+        Generiert Übungen basierend auf Noten UND hochgeladenem Material.
+        """
+        user_hash = self.db.get_user_hash(username)
         
-        # Noten holen (ähnlich wie oben)
+        # --- TEIL 1: Noten-Kontext (wie gehabt) ---
         grades = self.db.get_grades(user_hash)
+        # Filter: Nur Noten für das gewählte Fach
         subj_grades = [float(g[2]) for g in grades if g[1].lower() == subject.lower()]
-        context = ""
+        
+        grades_context = ""
         if subj_grades:
             avg = sum(subj_grades) / len(subj_grades)
-            context = f"Der Schüler steht in {subject} auf {avg:.2f}. Passe die Härte an."
+            grades_context = f"Der Schüler steht in {subject} aktuell auf {avg:.2f}. Passe die Schwierigkeit an (bei schlechten Noten einfacher, bei guten schwerer)."
+        else:
+            grades_context = "Keine Noten bekannt. Wähle mittlere Schwierigkeit."
 
-        exercises = self.ai.generate_exercises(subject, topic, count, context_info=context)
+        # --- TEIL 2: Material-Kontext (NEU & WICHTIG) 📄 ---
+        # Wir holen die 3 neuesten Zusammenfassungen zu diesem Fach
+        materials = self.db.get_subject_materials(user_hash, subject, limit=3)
         
-        if exercises: return exercises
+        material_context = ""
+        if materials:
+            # Datenbank gibt Liste von Tupeln zurück: [('Text A',), ('Text B',)]
+            summaries_list = [m[0] for m in materials]
+            joined_text = "\n\n".join(summaries_list)
+            
+            material_context = f"""
+            WICHTIG - BASIERE DIE FRAGEN AUF DIESEM UNTERRICHTSMATERIAL:
+            ------------------------------------------
+            {joined_text}
+            ------------------------------------------
+            Stelle sicher, dass die Fragen die Konzepte aus diesem Material abprüfen!
+            """
+        else:
+            material_context = "Kein spezifisches Unterrichtsmaterial vorhanden. Nutze allgemeines Lehrbuchwissen."
+
+        # --- TEIL 3: Zusammenfügen & KI Fragen ---
+        full_context_info = f"{grades_context}\n{material_context}"
+        
+        print(f"🧠 Generiere mit Kontext: {len(material_context)} Zeichen Material, Note: {avg if subj_grades else 'N/A'}")
+
+        # Übergabe an AI Engine (diese nutzt den context_info Prompt)
+        exercises = self.ai.generate_exercises(subject, topic, count, context_info=full_context_info)
+        
+        if exercises:
+            return exercises
+            
+        # Fallback
         return self._get_mc_multiple_fallback_exercises(subject, topic, count)
-        
+                
     def start_test_session(self, username, subject, topic, count=10):
         user_hash = self.db.get_user_hash(username)
         test_id = f"test_{int(time.time())}_{user_hash}"
@@ -559,3 +596,19 @@ class UniversalLernBuddy:
     def delete_grade(self, username, grade_id):
         user_hash = self.db.get_user_hash(username)
         return self.db.delete_grade(grade_id, user_hash)
+
+    # Hilfsmethode PDF Upload Verarbeitung:
+    
+    def process_uploaded_material(self, username, subject, filename, raw_text):
+        user_hash = self.db.get_user_hash(username)
+        
+        print(f"📄 Analysiere Material für {subject}...")
+        
+        # 1. KI fasst zusammen
+        summary = self.ai.analyze_document_text(raw_text, subject)
+        if not summary: summary = "Analyse fehlgeschlagen."
+        
+        # 2. Speichern (Wir raten das Thema basierend auf der ersten Zeile oder Dateiname, hier einfach "Upload")
+        self.db.save_material_summary(user_hash, subject, "PDF Upload", filename, summary)
+        
+        return summary

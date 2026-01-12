@@ -16,6 +16,9 @@ import sys
 import os
 import json
 import sqlite3
+from fastapi import UploadFile, File
+from pypdf import PdfReader
+import io
 
 # 🔧 Konfiguration
 sys.path.append(os.path.dirname(__file__))
@@ -676,8 +679,6 @@ async def analyze_grades(current_user: dict = Depends(get_current_user)):
     analysis = buddy.analyze_user_grades(current_user['sub'])
     return {"success": True, "data": analysis}
 
-# Irgendwo bei den Noten-Endpoints hinzufügen:
-
 @app.delete("/api/grades/{grade_id}")
 async def delete_grade(grade_id: int, current_user: dict = Depends(get_current_user)):
     """🗑️ Löscht eine Note"""
@@ -685,6 +686,44 @@ async def delete_grade(grade_id: int, current_user: dict = Depends(get_current_u
     
     success = buddy.delete_grade(current_user['sub'], grade_id)
     return {"success": success}
+
+
+@app.post("/api/upload-material")
+async def upload_material(
+    subject: str,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """📄 PDF Upload -> Text Extraktion -> KI Zusammenfassung -> DB"""
+    if not buddy: raise HTTPException(status_code=500)
+    
+    if not file.filename.endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="Aktuell nur PDFs unterstützt!")
+
+    try:
+        # 1. PDF Text extrahieren
+        content = await file.read()
+        pdf = PdfReader(io.BytesIO(content))
+        raw_text = ""
+        for page in pdf.pages:
+            raw_text += page.extract_text() + "\n"
+            
+        if len(raw_text) < 10:
+            raise HTTPException(status_code=400, detail="Konnte keinen Text lesen (evtl. nur Bilder?)")
+
+        # 2. KI Analyse (über Controller)
+        summary = buddy.process_uploaded_material(current_user['sub'], subject, file.filename, raw_text)
+        
+        return {"success": True, "message": "Material analysiert & gespeichert!", "summary_preview": summary[:100]+"..."}
+
+    except Exception as e:
+        print(f"Upload Fehler: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/materials")
+async def serve_materials():
+    """📄 Serve Material-Upload Seite"""
+    return FileResponse("../frontend/materials.html")
 
 # === START-SKRIPT ===
 
