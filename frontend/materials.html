@@ -2,7 +2,8 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>📄 Material Upload</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📄 Material Upload - KI-Lern-Buddy</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -10,91 +11,162 @@
         <header>
             <h1>📄 Unterlagen hochladen</h1>
             <p>Füttere den Lern-Buddy mit deinem Schulstoff!</p>
-            <button onclick="window.location.href='/'" class="secondary">Zurück</button>
+            <div style="margin-top: 10px;">
+                <button onclick="window.location.href='/'" class="secondary">⬅️ Zurück zum Dashboard</button>
+            </div>
         </header>
 
         <div class="card">
             <h2>Neues PDF hochladen</h2>
+            <p style="color: #666; margin-bottom: 20px;">
+                Lade hier deine Hefteinträge oder Zusammenfassungen hoch. 
+                Die KI liest sie und erstellt passende Übungsaufgaben dazu.
+            </p>
+
             <div class="form-group">
-                <label>Fach:</label>
-                <select id="subjectSelect">
-                    </select>
+                <label>Fach wählen:</label>
+                <select id="subjectSelect" style="width: 100%; margin-bottom: 10px; padding: 10px;">
+                    <option value="">Lade Fächer...</option>
+                </select>
+
+                <div style="background: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px dashed #ccc; margin-bottom: 20px;">
+                    <div style="display: flex; gap: 10px; align-items: center; font-size: 0.9em;">
+                        <span style="color: #666;">Fach nicht dabei?</span>
+                        <input type="text" id="newSubjectInput" placeholder="Neues Fach..." style="flex-grow: 1; padding: 5px;">
+                        <button onclick="addNewSubjectMaterial()" class="secondary" style="width: auto; padding: 5px 10px;">➕ Hinzufügen</button>
+                    </div>
+                </div>
                 
                 <label style="margin-top: 15px;">Datei (PDF):</label>
-                <input type="file" id="fileInput" accept=".pdf">
+                <input type="file" id="fileInput" accept=".pdf" style="margin-bottom: 20px;">
                 
-                <button onclick="uploadFile()" class="success" id="uploadBtn" style="margin-top: 15px;">
+                <button onclick="uploadFile()" class="success" id="uploadBtn" style="width: 100%; font-size: 1.1em;">
                     🚀 Analysieren & Speichern
                 </button>
             </div>
-            <div id="status"></div>
+
+            <div id="status" style="margin-top: 20px;"></div>
         </div>
     </div>
 
     <script src="/static/common.js"></script>
     <script>
-        // Kleines Inline-Script für den Upload
+        // === LOGIK DIREKT HIER (oder in materials.js auslagern) ===
+
         document.addEventListener('DOMContentLoaded', async () => {
             await checkAuthentication();
             loadSubjects();
         });
 
+        // 1. Fächer laden (Hybrid-Lösung: Lädt Kontext + Dropdown)
         async function loadSubjects() {
-            const res = await apiCall('/api/school-context');
-            const sel = document.getElementById('subjectSelect');
-            if(res.data && res.data.subjects) {
-                // Hier gleiche Logik wie bei grades.js nutzen um String/Array zu parsen
-                let subjs = res.data.subjects; 
-                if(typeof subjs === 'string') subjs = subjs.split(',');
-                subjs.forEach(s => {
-                    let opt = document.createElement('option');
-                    opt.value = s.trim();
-                    opt.innerText = s.trim();
-                    sel.appendChild(opt);
-                });
+            const select = document.getElementById('subjectSelect');
+            // Alten Inhalt löschen (bis auf den Placeholder)
+            select.innerHTML = '<option value="">-- Bitte wählen --</option>';
+
+            try {
+                const res = await apiCall('/api/school-context');
+                if(res.data && res.data.subjects) {
+                    let subjs = res.data.subjects; 
+                    // Falls String aus DB kommt, in Array wandeln
+                    if(typeof subjs === 'string') {
+                        subjs = subjs.replace(/[\[\]"]/g, '').split(',');
+                    }
+                    
+                    // Bereinigen und Sortieren
+                    subjs = subjs.map(s => s.trim()).filter(s => s !== "");
+                    subjs.sort();
+
+                    subjs.forEach(s => {
+                        let opt = document.createElement('option');
+                        opt.value = s;
+                        opt.innerText = s;
+                        select.appendChild(opt);
+                    });
+                }
+            } catch(e) {
+                console.error("Fehler beim Laden der Fächer:", e);
             }
         }
 
+        // 2. Neues Fach hinzufügen (Konsistenz-Feature)
+        async function addNewSubjectMaterial() {
+            const newSubj = document.getElementById('newSubjectInput').value.trim();
+            if (!newSubj) return;
+
+            try {
+                const res = await apiCall('/api/subjects', 'POST', { subject: newSubj });
+                if (res.success) {
+                    document.getElementById('newSubjectInput').value = '';
+                    // Dropdown sofort aktualisieren
+                    loadSubjects(); 
+                    // Kleines Feedback
+                    const status = document.getElementById('status');
+                    status.innerHTML = `<p style="color: green;">Fach '${newSubj}' hinzugefügt!</p>`;
+                    setTimeout(() => status.innerHTML = '', 3000);
+                }
+            } catch (e) {
+                alert("Fehler beim Hinzufügen des Fachs.");
+            }
+        }
+
+        // 3. Datei Upload
         async function uploadFile() {
             const fileInput = document.getElementById('fileInput');
             const subject = document.getElementById('subjectSelect').value;
             
-            if(fileInput.files.length === 0) return alert("Bitte Datei wählen!");
+            if(!subject) return alert("Bitte wähle zuerst ein Fach aus!");
+            if(fileInput.files.length === 0) return alert("Bitte wähle eine PDF-Datei aus!");
             
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
             
-            // WICHTIG: Query Parameter für subject nutzen
+            // WICHTIG: Subject als Query-Parameter an die URL hängen
             const url = `/api/upload-material?subject=${encodeURIComponent(subject)}`;
             
-            document.getElementById('status').innerHTML = '<p>⏳ Lese PDF & frage KI... (kann dauern)</p>';
+            // UI Update: Ladeanzeige
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `
+                <div style="background: #e2e3e5; padding: 15px; border-radius: 5px; text-align: center;">
+                    <p>⏳ <strong>KI analysiert dein Dokument...</strong></p>
+                    <p style="font-size: 0.9em;">Das kann kurz dauern. Bitte warten.</p>
+                </div>`;
             document.getElementById('uploadBtn').disabled = true;
 
             try {
-                // Hier nutzen wir fetch direkt, da apiCall meist JSON erwartet, wir aber FormData senden
+                // Fetch benutzen, da wir FormData (Datei) senden
                 const token = localStorage.getItem('token');
                 const response = await fetch(url, {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` }, // KEIN Content-Type Header bei FormData!
+                    headers: { 'Authorization': `Bearer ${token}` }, // KEIN Content-Type Header manuell setzen!
                     body: formData
                 });
                 
                 const result = await response.json();
+                
                 if(result.success) {
-                    document.getElementById('status').innerHTML = `
-                        <p style="color:green;">✅ Fertig!</p>
-                        <div style="background:#eee; padding:10px; font-size:0.8em; margin-top:5px;">
-                            <strong>KI-Zusammenfassung:</strong><br>
-                            ${result.summary_preview}
+                    statusDiv.innerHTML = `
+                        <div style="background: #d4edda; color: #155724; padding: 15px; border-radius: 5px; border: 1px solid #c3e6cb;">
+                            <h3>✅ Analyse erfolgreich!</h3>
+                            <p>Das Wissen wurde gespeichert.</p>
+                            <hr style="margin: 10px 0; border-color: #c3e6cb;">
+                            <p><strong>KI-Zusammenfassung (Vorschau):</strong></p>
+                            <div style="background: white; padding: 10px; border-radius: 5px; font-size: 0.9em; max-height: 200px; overflow-y: auto;">
+                                ${result.summary_preview}
+                            </div>
                         </div>`;
                 } else {
-                    document.getElementById('status').innerText = 'Fehler: ' + result.detail;
+                    throw new Error(result.detail || "Unbekannter Fehler");
                 }
             } catch(e) {
-                document.getElementById('status').innerText = 'Upload Fehler.';
-                console.error(e);
+                statusDiv.innerHTML = `
+                    <div style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 5px;">
+                        ❌ <strong>Upload fehlgeschlagen:</strong><br>
+                        ${e.message}
+                    </div>`;
+            } finally {
+                document.getElementById('uploadBtn').disabled = false;
             }
-            document.getElementById('uploadBtn').disabled = false;
         }
     </script>
 </body>
