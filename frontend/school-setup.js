@@ -99,3 +99,92 @@ function filterGrades() {
         gradeSelect.value = "";
     }
 }
+
+
+document.addEventListener('DOMContentLoaded', loadSetupSubjects);
+
+async function loadSetupSubjects() {
+    const list = document.getElementById('setupSubjectsList');
+    if(!list) return; // Falls wir auf einer anderen Seite sind
+    
+    try {
+        const res = await apiCall('/api/school-context');
+        if (res.success && res.data && res.data.subjects) {
+            list.innerHTML = '';
+            
+            // Fächer parsen (String oder Array)
+            let subjects = res.data.subjects;
+            if (typeof subjects === 'string') {
+                subjects = subjects.replace(/[\[\]"]/g, '').split(',').filter(s => s.trim());
+            }
+            
+            // Alphabetisch sortieren
+            subjects.sort();
+
+            subjects.forEach(subj => {
+                const tag = document.createElement('div');
+                tag.className = 'subject-tag';
+                tag.style.cssText = `
+                    background: #e9ecef; 
+                    padding: 5px 12px; 
+                    border-radius: 20px; 
+                    display: flex; 
+                    align-items: center; 
+                    gap: 8px;
+                    font-size: 0.9em;
+                `;
+                tag.innerHTML = `
+                    <strong>${subj.trim()}</strong>
+                    <span onclick="removeSubject('${subj.trim()}')" style="cursor: pointer; color: #dc3545; font-weight: bold;">&times;</span>
+                `;
+                list.appendChild(tag);
+            });
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function addSubjectInSetup() {
+    const input = document.getElementById('setupNewSubject');
+    const subj = input.value.trim();
+    if (!subj) return;
+
+    await apiCall('/api/subjects', 'POST', { subject: subj });
+    input.value = '';
+    loadSetupSubjects(); // Liste neu laden
+}
+
+async function removeSubject(subjectToRemove) {
+    if(!confirm(`Fach '${subjectToRemove}' wirklich aus der Liste entfernen?`)) return;
+    
+    // Wir müssen die aktuelle Liste holen, filtern und neu speichern
+    // Da wir keinen expliziten DELETE Endpoint für einzelne Fächer im Array haben,
+    // nutzen wir einen kleinen Trick: Liste holen -> Filtern -> Context Update senden.
+    
+    try {
+        const res = await apiCall('/api/school-context');
+        let currentSubjects = res.data.subjects;
+        if (typeof currentSubjects === 'string') {
+            currentSubjects = currentSubjects.replace(/[\[\]"]/g, '').split(',').map(s => s.trim());
+        }
+        
+        // Filtern
+        const newSubjects = currentSubjects.filter(s => s !== subjectToRemove);
+        
+        // Speichern (wir senden das komplette Context-Objekt zurück, nur mit neuen Fächern)
+        const updateData = {
+            grade: res.data.grade,
+            school_type: res.data.school_type,
+            state: res.data.state,
+            subjects: newSubjects, // Die neue Liste
+            curriculum_focus: res.data.curriculum_focus
+        };
+        
+        await apiCall('/api/set-school-context', 'POST', updateData);
+        loadSetupSubjects();
+        
+    } catch(e) {
+        alert("Fehler beim Löschen: " + e);
+    }
+}
