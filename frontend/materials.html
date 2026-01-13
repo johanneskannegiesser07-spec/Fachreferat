@@ -23,24 +23,29 @@
                 Die KI liest sie und erstellt passende Übungsaufgaben dazu.
             </p>
 
-            <div class="form-group">
-                <label>Fach wählen:</label>
-                <select id="subjectSelect" style="width: 100%; margin-bottom: 10px; padding: 10px;">
-                    <option value="">Lade Fächer...</option>
-                </select>
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Fach wählen:</label>
+                    <select id="subjectSelect" style="width: 100%; padding: 12px;">
+                        <option value="">Lade Fächer...</option>
+                    </select>
+                </div>
 
-                <div style="background: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px dashed #ccc; margin-bottom: 20px;">
-                    <div style="display: flex; gap: 10px; align-items: center; font-size: 0.9em;">
-                        <span style="color: #666;">Fach nicht dabei?</span>
-                        <input type="text" id="newSubjectInput" placeholder="Neues Fach..." style="flex-grow: 1; padding: 5px;">
-                        <button onclick="addNewSubjectMaterial()" class="secondary" style="width: auto; padding: 5px 10px;">➕ Hinzufügen</button>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px dashed #ccc;">
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        <span style="color: #666; font-size: 0.9em; white-space: nowrap;">Fach nicht dabei?</span>
+                        <input type="text" id="newSubjectInput" placeholder="Neues Fach eingeben..." style="flex-grow: 1; min-width: 150px;">
+                        <button onclick="addNewSubjectMaterial()" class="secondary" style="width: auto; padding: 10px 15px;">➕ Hinzufügen</button>
                     </div>
                 </div>
                 
-                <label style="margin-top: 15px;">Datei (PDF):</label>
-                <input type="file" id="fileInput" accept=".pdf" style="margin-bottom: 20px;">
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold; margin-top: 10px;">Datei (PDF):</label>
+                    <input type="file" id="fileInput" accept=".pdf" style="width: 100%; padding: 10px; background: #f8f9fa; border-radius: 8px;">
+                </div>
                 
-                <button onclick="uploadFile()" class="success" id="uploadBtn" style="width: 100%; font-size: 1.1em;">
+                <button onclick="uploadFile()" class="success" id="uploadBtn" style="width: 100%; margin-top: 10px; font-size: 1.1em; padding: 15px;">
                     🚀 Analysieren & Speichern
                 </button>
             </div>
@@ -51,29 +56,22 @@
 
     <script src="/static/common.js"></script>
     <script>
-        // === LOGIK DIREKT HIER (oder in materials.js auslagern) ===
-
         document.addEventListener('DOMContentLoaded', async () => {
             await checkAuthentication();
             loadSubjects();
         });
 
-        // 1. Fächer laden (Hybrid-Lösung: Lädt Kontext + Dropdown)
         async function loadSubjects() {
             const select = document.getElementById('subjectSelect');
-            // Alten Inhalt löschen (bis auf den Placeholder)
             select.innerHTML = '<option value="">-- Bitte wählen --</option>';
 
             try {
                 const res = await apiCall('/api/school-context');
                 if(res.data && res.data.subjects) {
                     let subjs = res.data.subjects; 
-                    // Falls String aus DB kommt, in Array wandeln
                     if(typeof subjs === 'string') {
                         subjs = subjs.replace(/[\[\]"]/g, '').split(',');
                     }
-                    
-                    // Bereinigen und Sortieren
                     subjs = subjs.map(s => s.trim()).filter(s => s !== "");
                     subjs.sort();
 
@@ -89,7 +87,6 @@
             }
         }
 
-        // 2. Neues Fach hinzufügen (Konsistenz-Feature)
         async function addNewSubjectMaterial() {
             const newSubj = document.getElementById('newSubjectInput').value.trim();
             if (!newSubj) return;
@@ -98,9 +95,7 @@
                 const res = await apiCall('/api/subjects', 'POST', { subject: newSubj });
                 if (res.success) {
                     document.getElementById('newSubjectInput').value = '';
-                    // Dropdown sofort aktualisieren
                     loadSubjects(); 
-                    // Kleines Feedback
                     const status = document.getElementById('status');
                     status.innerHTML = `<p style="color: green;">Fach '${newSubj}' hinzugefügt!</p>`;
                     setTimeout(() => status.innerHTML = '', 3000);
@@ -110,7 +105,6 @@
             }
         }
 
-        // 3. Datei Upload
         async function uploadFile() {
             const fileInput = document.getElementById('fileInput');
             const subject = document.getElementById('subjectSelect').value;
@@ -121,10 +115,8 @@
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
             
-            // WICHTIG: Subject als Query-Parameter an die URL hängen
             const url = `/api/upload-material?subject=${encodeURIComponent(subject)}`;
             
-            // UI Update: Ladeanzeige
             const statusDiv = document.getElementById('status');
             statusDiv.innerHTML = `
                 <div style="background: #e2e3e5; padding: 15px; border-radius: 5px; text-align: center;">
@@ -134,11 +126,10 @@
             document.getElementById('uploadBtn').disabled = true;
 
             try {
-                // Fetch benutzen, da wir FormData (Datei) senden
                 const token = localStorage.getItem('token');
                 const response = await fetch(url, {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` }, // KEIN Content-Type Header manuell setzen!
+                    headers: { 'Authorization': `Bearer ${token}` }, 
                     body: formData
                 });
                 
