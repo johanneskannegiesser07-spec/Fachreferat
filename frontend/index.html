@@ -21,7 +21,7 @@
                 <button onclick="toggleDebug()" style="background: #6c757d; padding: 5px 10px; font-size: 12px;">Debug</button>
             </div>
 
-            <button onclick="goToTest()" style="background: #28a745; margin-left: 10px;">
+            <!-- <button onclick="goToTest()" style="background: #28a745; margin-left: 10px;">
                 🧪 Test-Modus
             </button>
 
@@ -29,19 +29,27 @@
             function goToTest() {
                 window.location.href = '/test';
             }
-            </script>
-            <button onclick="window.location.href='/flashcards'" style="background: #6f42c1; margin-left: 10px;">
-                🃏 Karteikarten
-            </button>
-            <button onclick="window.location.href='/static/planner.html'" style="background: #17a2b8; margin-left: 10px;">
-                📅 Lernplaner
-            </button>
-            <button onclick="window.location.href='/static/grades.html'" style="background: #e0a800; margin-left: 10px;">
-                📊 Noten
-            </button>
-            <button onclick="window.location.href='/materials'" style="background: #fd7e14; margin-left: 10px;">
-                📄 Material
-            </button>
+            </script> -->
+            <div class="nav_bar">
+                <button onclick="window.location.href='/flashcards'" style="background: #6f42c1; margin-left: 10px;">
+                    🃏 Karteikarten
+                </button>
+                <button onclick="window.location.href='/static/planner.html'" style="background: #17a2b8; margin-left: 10px;">
+                    📅 Lernplaner
+                </button>
+                <button onclick="window.location.href='/static/grades.html'" style="background: #e0a800; margin-left: 10px;">
+                    📊 Noten
+                </button>
+                <button onclick="window.location.href='/materials'" style="background: #fd7e14; margin-left: 10px;">
+                    📄 Material
+                </button>
+                <button onclick="window.location.href='/test'" style="background: #28a745; margin-left: 10px;">
+                    🧪 Test-Modus
+                </button>
+                <button onclick="window.location.href='/chat'" style="background: #007bff; margin-left: 10px;">
+                💬 KI-Chat
+                </button>
+            </div>
         </header>
 
         <div id="debug" class="debug"></div>

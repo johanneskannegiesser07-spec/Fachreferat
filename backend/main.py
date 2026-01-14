@@ -112,6 +112,11 @@ class GradeEntry(BaseModel):
 class NewSubject(BaseModel):
     subject: str
 
+class ChatRequest(BaseModel):
+    message: str
+    subject: str
+    history: list = []
+
 # === AUTHENTIFIZIERUNG ===
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -724,6 +729,23 @@ async def upload_material(
 async def serve_materials():
     """📄 Serve Material-Upload Seite"""
     return FileResponse("../frontend/materials.html")
+
+@app.post("/api/chat")
+async def chat_endpoint(req: ChatRequest, current_user: dict = Depends(get_current_user)):
+    """💬 Sendet eine Nachricht an den KI-Tutor"""
+    if not buddy: raise HTTPException(status_code=500)
+    
+    response = buddy.chat_with_ai(
+        current_user['sub'], 
+        req.message, 
+        req.subject, 
+        req.history
+    )
+    return {"success": True, "response": response}
+
+@app.get("/chat")
+async def serve_chat():
+    return FileResponse("../frontend/chat.html")
 
 # === START-SKRIPT ===
 

@@ -1,137 +1,127 @@
-// frontend/school-setup.js - Logik für die Schulkonfiguration
+// frontend/school-setup.js
+
+const germanStates = [
+    "Baden-Württemberg", "Bayern", "Berlin", "Brandenburg", "Bremen",
+    "Hamburg", "Hessen", "Mecklenburg-Vorpommern", "Niedersachsen",
+    "Nordrhein-Westfalen", "Rheinland-Pfalz", "Saarland", "Sachsen",
+    "Sachsen-Anhalt", "Schleswig-Holstein", "Thüringen"
+];
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Prüfen ob eingeloggt
     await checkAuthentication();
     
-    // 2. Event Listener für das Formular (Speichern)
-    const form = document.getElementById('schoolForm');
-    if (form) {
-        form.addEventListener('submit', saveSchoolConfig);
-    }
-
-    // 3. Event Listener für Schulart-Filter (Klassen dynamisch filtern)
-    const schoolTypeSelect = document.getElementById('schoolType');
-    if (schoolTypeSelect) {
-        schoolTypeSelect.addEventListener('change', filterGrades);
-    }
+    // 1. Bundesländer Dropdown befüllen
+    populateStates();
+    
+    // 2. Aktuelle Daten laden und Felder ausfüllen (Pre-Fill)
+    await loadCurrentSettings();
+    
+    // 3. Fächerliste laden
+    loadSetupSubjects();
 });
 
-async function saveSchoolConfig(e) {
-    e.preventDefault();
+function populateStates() {
+    const select = document.getElementById('federalState');
+    select.innerHTML = '<option value="">-- Bitte wählen --</option>';
     
-    // Daten aus dem Formular sammeln
-    const formData = {
-        school_type: document.getElementById('schoolType').value,
-        grade: document.getElementById('grade').value,
-        state: document.getElementById('state').value,
-        curriculum_focus: document.getElementById('focus').value,
-        subjects: [] // Platzhalter, falls du später Checkboxen für Fächer hinzufügst
-    };
-    
+    germanStates.forEach(state => {
+        const opt = document.createElement('option');
+        opt.value = state;
+        opt.textContent = state;
+        select.appendChild(opt);
+    });
+}
+
+// === LÄDT GESPEICHERTE DATEN IN DIE FELDER ===
+async function loadCurrentSettings() {
     try {
-        // API Aufruf an das Backend
-        const result = await apiCall('/api/set-school-context', 'POST', formData);
-        
-        if (result.success) {
-            showMessage('✅ Schulkonfiguration erfolgreich gespeichert!', 'success-msg');
+        const res = await apiCall('/api/school-context');
+        if (res.success && res.data) {
+            const d = res.data;
             
-            // Kurze Wartezeit, dann ab zum Dashboard
-            setTimeout(() => {
-                window.location.href = '/'; // Dashboard/Index
-            }, 1500);
+            // Felder vor-ausfüllen, falls Daten vorhanden sind
+            if (d.school_type) document.getElementById('schoolType').value = d.school_type;
+            if (d.grade) document.getElementById('schoolGrade').value = d.grade;
+            if (d.state) document.getElementById('federalState').value = d.state;
+            
+            console.log("✅ Einstellungen geladen:", d);
         }
-    } catch (error) {
-        showMessage('❌ Fehler beim Speichern: ' + error.message, 'error-msg');
+    } catch (e) {
+        console.error("Konnte Einstellungen nicht laden", e);
     }
 }
 
-// --- WICHTIGE HELFER-FUNKTIONEN FÜR DIE BUTTONS ---
+// === SPEICHERN ===
+async function saveSchoolData() {
+    const schoolType = document.getElementById('schoolType').value;
+    const grade = document.getElementById('schoolGrade').value;
+    const state = document.getElementById('federalState').value;
 
-function goToDashboard() {
-    window.location.href = '/'; // Leitet zurück zur Startseite (index.html)
-}
-
-function skipSetup() {
-    if (confirm('Möchtest du die Konfiguration wirklich überspringen? Die KI kann dir dann weniger gut helfen.')) {
-        window.location.href = '/';
+    if (!grade || !state) {
+        alert("Bitte Klasse und Bundesland angeben!");
+        return;
     }
-}
-
-function showMessage(text, className) {
-    const messageDiv = document.getElementById('message');
-    if (messageDiv) {
-        messageDiv.textContent = text;
-        messageDiv.className = className; // z.B. 'success-msg' oder 'error-msg' aus style.css
-        messageDiv.style.display = 'block';
-    } else {
-        alert(text); // Fallback falls das Div fehlt
-    }
-}
-
-function filterGrades() {
-    // Diese Funktion filtert die Klassen-Optionen basierend auf der Schulart
-    // (z.B. zeigt sie bei "FOS" nur Klassen 11-13 an)
-    const gradeSelect = document.getElementById('grade');
-    const schoolType = document.getElementById('schoolType').value; // 'this' kann hier tricky sein, lieber explizit holen
     
-    if (!gradeSelect) return;
+    // Wir müssen die aktuellen Fächer mitgeben, sonst werden sie überschrieben (leeres Array),
+    // oder wir ändern das Backend so, dass es partielle Updates erlaubt. 
+    // Sicherer Weg aktuell: Fächer erst laden, dann mitsenden.
+    
+    let currentSubjects = [];
+    try {
+        // Kurz die aktuellen Fächer holen, damit wir sie nicht löschen
+        const res = await apiCall('/api/school-context');
+        if (res.data && res.data.subjects) {
+            currentSubjects = res.data.subjects;
+            if(typeof currentSubjects === 'string') {
+                 currentSubjects = currentSubjects.replace(/[\[\]"]/g, '').split(',');
+            }
+        }
+    } catch(e) { /* ignore */ }
 
-    for (let option of gradeSelect.options) {
-        if (option.value === '') continue; // "Bitte wählen" immer anzeigen
+    const data = {
+        school_type: schoolType,
+        grade: grade,
+        state: state,
+        subjects: currentSubjects, // Bestehende Fächer beibehalten!
+        curriculum_focus: "allgemein"
+    };
 
-        if (schoolType === 'fos') {
-            // Zeige nur FOS-relevante Klassen (beginnen mit 'fos' oder sind 11, 12, 13)
-            const isFos = option.value.startsWith('fos') || ['11', '12', '13'].includes(option.value);
-            option.style.display = isFos ? '' : 'none';
-        } else if (schoolType === 'bos') {
-            // Zeige nur BOS-relevante Klassen
-            const isBos = option.value.startsWith('bos') || ['12', '13'].includes(option.value);
-            option.style.display = isBos ? '' : 'none';
+    try {
+        const res = await apiCall('/api/set-school-context', 'POST', data);
+        if (res.success) {
+            showOutput("✅ Profil gespeichert! Der Lern-Buddy passt sich jetzt an.", "success-msg");
         } else {
-            // Bei anderen Schulen (Gymnasium etc.) alles anzeigen
-            option.style.display = '';
+            showOutput("Fehler beim Speichern.", "error-msg");
         }
-    }
-    
-    // Reset der Auswahl, falls die gewählte Klasse jetzt unsichtbar ist
-    if (gradeSelect.selectedOptions[0] && gradeSelect.selectedOptions[0].style.display === 'none') {
-        gradeSelect.value = "";
+    } catch (e) {
+        showOutput("Verbindungsfehler.", "error-msg");
     }
 }
 
-
-document.addEventListener('DOMContentLoaded', loadSetupSubjects);
+// === FÄCHER LISTE LOGIK (Vom vorherigen Schritt) ===
 
 async function loadSetupSubjects() {
     const list = document.getElementById('setupSubjectsList');
-    if(!list) return; // Falls wir auf einer anderen Seite sind
+    if(!list) return;
     
     try {
         const res = await apiCall('/api/school-context');
         if (res.success && res.data && res.data.subjects) {
             list.innerHTML = '';
             
-            // Fächer parsen (String oder Array)
             let subjects = res.data.subjects;
             if (typeof subjects === 'string') {
                 subjects = subjects.replace(/[\[\]"]/g, '').split(',').filter(s => s.trim());
             }
-            
-            // Alphabetisch sortieren
             subjects.sort();
 
             subjects.forEach(subj => {
                 const tag = document.createElement('div');
                 tag.className = 'subject-tag';
+                // Inline Styles für Tags (oder in CSS auslagern)
                 tag.style.cssText = `
-                    background: #e9ecef; 
-                    padding: 5px 12px; 
-                    border-radius: 20px; 
-                    display: flex; 
-                    align-items: center; 
-                    gap: 8px;
-                    font-size: 0.9em;
+                    background: #e9ecef; padding: 5px 12px; border-radius: 20px; 
+                    display: flex; align-items: center; gap: 8px; font-size: 0.9em;
                 `;
                 tag.innerHTML = `
                     <strong>${subj.trim()}</strong>
@@ -152,32 +142,26 @@ async function addSubjectInSetup() {
 
     await apiCall('/api/subjects', 'POST', { subject: subj });
     input.value = '';
-    loadSetupSubjects(); // Liste neu laden
+    loadSetupSubjects(); 
 }
 
 async function removeSubject(subjectToRemove) {
-    if(!confirm(`Fach '${subjectToRemove}' wirklich aus der Liste entfernen?`)) return;
-    
-    // Wir müssen die aktuelle Liste holen, filtern und neu speichern
-    // Da wir keinen expliziten DELETE Endpoint für einzelne Fächer im Array haben,
-    // nutzen wir einen kleinen Trick: Liste holen -> Filtern -> Context Update senden.
+    if(!confirm(`Fach '${subjectToRemove}' entfernen?`)) return;
     
     try {
         const res = await apiCall('/api/school-context');
-        let currentSubjects = res.data.subjects;
+        let currentSubjects = res.data.subjects || [];
         if (typeof currentSubjects === 'string') {
             currentSubjects = currentSubjects.replace(/[\[\]"]/g, '').split(',').map(s => s.trim());
         }
         
-        // Filtern
         const newSubjects = currentSubjects.filter(s => s !== subjectToRemove);
         
-        // Speichern (wir senden das komplette Context-Objekt zurück, nur mit neuen Fächern)
         const updateData = {
             grade: res.data.grade,
             school_type: res.data.school_type,
             state: res.data.state,
-            subjects: newSubjects, // Die neue Liste
+            subjects: newSubjects,
             curriculum_focus: res.data.curriculum_focus
         };
         

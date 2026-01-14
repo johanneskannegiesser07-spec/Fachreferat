@@ -3,88 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🏫 Schulkonfiguration - KI-Lern-Buddy</title>
+    <title>Schul-Konfiguration - KI-Lern-Buddy</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <div class="container">
-        
         <header>
-            <h1>🏫 Schul-Setup</h1>
-            <p>Konfiguriere deinen Lern-Buddy für optimale Ergebnisse</p>
+            <h1>🏫 Dein Schulprofil</h1>
+            <p>Damit der Lern-Buddy weiß, was du brauchst.</p>
+            <div style="margin-top: 10px;">
+                <button onclick="window.location.href='/'" class="secondary">⬅️ Zurück zum Dashboard</button>
+            </div>
         </header>
 
-        <div class="card">
-            <h2>⚙️ Deine Einstellungen</h2>
-            <p style="margin-bottom: 20px; color: #666;">
-                Damit die KI passende Aufgaben erstellt, brauchen wir ein paar Infos.
-            </p>
-
-            <form id="schoolForm">
-                <div class="form-group">
-                    <label for="schoolType">Schulart</label>
-                    <select id="schoolType" required>
-                        <option value="">Bitte wählen...</option>
-                        <option value="gymnasium">Gymnasium</option>
-                        <option value="realschule">Realschule</option>
-                        <option value="fos">FOS (Fachoberschule)</option>
-                        <option value="bos">BOS (Berufsoberschule)</option>
-                        <option value="hauptschule">Mittelschule</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="grade">Klasse / Jahrgangsstufe</label>
-                    <select id="grade" required>
-                        <option value="">Bitte wählen...</option>
-                        <option value="5">5. Klasse</option>
-                        <option value="6">6. Klasse</option>
-                        <option value="7">7. Klasse</option>
-                        <option value="8">8. Klasse</option>
-                        <option value="9">9. Klasse</option>
-                        <option value="10">10. Klasse</option>
-                        <option value="11">11. Klasse / Q11</option>
-                        <option value="12">12. Klasse / Q12</option>
-                        <option value="13">13. Klasse</option>
-                        <option value="fos11">FOS 11</option>
-                        <option value="fos12">FOS 12</option>
-                        <option value="fos13">FOS 13</option>
-                        <option value="bos12">BOS 12</option>
-                        <option value="bos13">BOS 13</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="state">Bundesland</label>
-                    <select id="state">
-                        <option value="Bayern" selected>Bayern</option>
-                        <option value="Baden-Württemberg">Baden-Württemberg</option>
-                        <option value="NRW">Nordrhein-Westfalen</option>
-                        <option value="Andere">Anderes Bundesland</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="focus">Schwerpunkt (Optional)</label>
-                    <select id="focus">
-                        <option value="allgemein">Allgemein</option>
-                        <option value="naturwissenschaft">Naturwissenschaftlich (MINT)</option>
-                        <option value="sprachlich">Sprachlich</option>
-                        <option value="wirtschaft">Wirtschaft & Recht</option>
-                        <option value="kunst">Kunst & Musik</option>
-                        <option value="technik">Technik (FOS)</option>
-                        <option value="sozial">Soziales (FOS)</option>
-                    </select>
-                </div>
-
-                <div class="form-group" style="margin-top: 30px;">
-                    <button type="button" onclick="goToDashboard()" class="danger">Abbrechen</button>
-                    <button type="button" onclick="skipSetup()" class="secondary">Überspringen</button>
-                    <button type="submit" class="success">Speichern ✅</button>
-                </div>
-            </form>
+        <div class="card" id="schoolForm">
+            <h2>⚙️ Grundeinstellungen</h2>
             
-            <div class="card" style="margin-top: 20px; border-top: 1px solid #eee;">
+            <div class="form-group">
+                <label>Schulart:</label>
+                <select id="schoolType">
+                    <option value="Gymnasium">Gymnasium</option>
+                    <option value="Realschule">Realschule</option>
+                    <option value="FOS/BOS">FOS / BOS</option>
+                    <option value="Mittelschule">Mittelschule</option>
+                    <option value="Uni">Universität / Hochschule</option>
+                    <option value="Ausbildung">Berufsausbildung</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Klasse / Stufe:</label>
+                <input type="text" id="schoolGrade" placeholder="z.B. 10, Q11, FOS12">
+            </div>
+
+            <div class="form-group">
+                <label>Bundesland:</label>
+                <select id="federalState">
+                    <option value="">Lade Bundesländer...</option>
+                </select>
+            </div>
+
+            <div class="form-group" style="margin-top: 20px;">
+                <button onclick="saveSchoolData()" class="success" style="width: 100%;">✅ Einstellungen Speichern</button>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 20px; border-top: 1px solid #eee;">
             <h2>📚 Meine Fächer verwalten</h2>
             <p style="color: #666; font-size: 0.9em;">Hier siehst du alle deine aktiven Fächer. Du kannst sie hier zentral bearbeiten.</p>
             
@@ -98,9 +62,6 @@
             <div id="setupSubjectsList" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px;">
                 Lade Fächer...
             </div>
-        </div>
-            
-            <div id="message" style="display:none; margin-top:20px; padding:15px; border-radius:5px;"></div>
         </div>
     </div>
 

@@ -344,3 +344,35 @@ class AIEngine:
         """
         # Hier reicht einfacher Text als Antwort
         return self._robust_api_call(prompt, response_format="text")
+
+    def chat_tutor(self, message, subject, school_context, material_context, chat_history=[]):
+        """
+        💬 Der interaktive Tutor-Modus.
+        """
+        history_text = "\n".join([f"User: {entry['user']}\nAI: {entry['ai']}" for entry in chat_history[-3:]])
+
+        prompt = f"""
+        ROLLE:
+        Du bist ein geduldiger, schlauer Nachhilfe-Lehrer für einen Schüler ({school_context}).
+        Fach: {subject}
+        
+        WISSENSBASIS (Aus den Heften des Schülers):
+        {material_context}
+        
+        KONTEXT/VERLAUF:
+        {history_text}
+        
+        NEUE FRAGE:
+        "{message}"
+        
+        ANWEISUNG:
+        1. Antworte kurz, prägnant und hilfreich.
+        2. Nutze Markdown für Formatierung (**Fett**, *Kursiv*, Listen -).
+        3. WICHTIG: Antworte NUR mit dem Text. KEIN JSON format! KEINE geschweiften Klammern {{ }} am Anfang/Ende.
+        4. Wenn du aufzählen musst, nutze Bullet Points (-).
+        
+        Beziehe dich STARK auf die Wissensbasis oben, wenn relevant.
+        """
+        
+        # Antwort als reiner Text
+        return self._robust_api_call(prompt, response_format="text")
