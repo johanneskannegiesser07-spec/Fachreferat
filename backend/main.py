@@ -799,7 +799,7 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.send_json(game.get_state())
             
             # GAME OVER / WIN CHECK
-            if game.game_over or game.won:
+            if game.game_over or game.game_won:
                 # BELOHNUNG
                 xp_gain = 0
                 msg = "GAME OVER"
@@ -813,7 +813,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 final_state = game.get_state()
                 final_state['message'] = msg
                 final_state['xp_earned'] = xp_gain
-                await websocket.send_json(final_msg)
+                await websocket.send_json(final_state)
                 
                 # Kurze Pause, dann Verbindung zu
                 await asyncio.sleep(2)
