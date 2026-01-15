@@ -9,3 +9,4 @@ pypdf==6.6.0
 python-multipart==0.0.6
 # Optional, falls du Templates nutzt (aktuell machst du FileResponse):
 # jinja2==3.1.2
+websockets

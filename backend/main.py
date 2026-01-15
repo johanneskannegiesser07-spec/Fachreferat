@@ -749,6 +749,10 @@ async def chat_endpoint(req: ChatRequest, current_user: dict = Depends(get_curre
 async def serve_chat():
     return FileResponse("../frontend/chat.html")
 
+@app.get("/game")
+async def serve_chat():
+    return FileResponse("../frontend/game.html")
+
 @app.websocket("/ws/game")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
