@@ -19,6 +19,7 @@ import sqlite3
 from fastapi import UploadFile, File
 from pypdf import PdfReader
 import io
+from game_agent import GameSession
 
 # 🔧 Konfiguration
 sys.path.append(os.path.dirname(__file__))
@@ -746,6 +747,82 @@ async def chat_endpoint(req: ChatRequest, current_user: dict = Depends(get_curre
 @app.get("/chat")
 async def serve_chat():
     return FileResponse("../frontend/chat.html")
+
+@app.websocket("/ws/game")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    
+    # 1. Auth & Bezahlen (Quick & Dirty Token Check als erste Nachricht)
+    try:
+        token = await websocket.receive_text()
+        # Hier vereinfacht: Wir nehmen an, der Token ist valide oder nutzen eine Hilfsfunktion
+        # In echt: user = verify_token(token)
+        
+        # Wir holen uns den User aus dem Token (vereinfachte Annahme für Demo)
+        # Wenn du verify_token hast, nutze das!
+        user_hash = "demo_user_hash" # Platzhalter, falls Auth kompliziert ist
+        
+        # GEMS CHECKEN & ABZIEHEN (Dein DatabaseManager)
+        # stats = buddy.db.get_user_gamification(user_hash)
+        # if stats['gems'] < 1:
+        #     await websocket.send_json({"error": "Zu wenig Gems! 💎"})
+        #     await websocket.close()
+        #     return
+        # buddy.db.update_gamification(user_hash, 0, -1) # 1 Gem abziehen
+        
+    except Exception:
+        # Falls Auth fehlschlägt, lassen wir ihn für die Demo trotzdem spielen ;)
+        pass
+
+    # 2. Spiel starten
+    game = GameSession()
+    
+    try:
+        while True:
+            # INPUT (Non-Blocking Hack für flüssiges Spiel)
+            try:
+                # Wir warten extrem kurz auf Input
+                data = await asyncio.wait_for(websocket.receive_text(), timeout=0.01)
+                game.apply_input(data) # Das leitet 'UP', 'SPACE' etc. an die Engine weiter
+            except asyncio.TimeoutError:
+                pass # Kein Input, Spiel läuft weiter
+            
+            # PHYSIK UPDATE
+            game.update()
+            
+            # STATE SENDEN
+            await websocket.send_json(game.get_state())
+            
+            # GAME OVER / WIN CHECK
+            if game.game_over or game.won:
+                # BELOHNUNG
+                xp_gain = 0
+                msg = "GAME OVER"
+                
+                if game.won:
+                    xp_gain = 42 # Die magische Zahl!
+                    msg = "MISSION ACCOMPLISHED"
+                    # buddy.db.update_gamification(user_hash, xp_gain, 0) # XP gutschreiben
+                
+                # Letzten Status senden mit Info
+                final_state = game.get_state()
+                final_state['message'] = msg
+                final_state['xp_earned'] = xp_gain
+                await websocket.send_json(final_msg)
+                
+                # Kurze Pause, dann Verbindung zu
+                await asyncio.sleep(2)
+                await websocket.close()
+                break
+                
+            # 30 FPS Takt
+            await asyncio.sleep(0.033)
+            
+    except Exception as e:
+        print(f"Game Error: {e}")
+        try:
+            await websocket.close()
+        except: pass
 
 # === START-SKRIPT ===
 
