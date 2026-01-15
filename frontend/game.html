@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎮 Gravity Defender - Cloud Gaming</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        /* Spezifisches Game Design */
+        .game-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        canvas {
+            background: #0f0f1a; /* Weltraum-Schwarz */
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(102, 126, 234, 0.3);
+            border: 2px solid #333;
+            max-width: 100%;
+        }
+
+        .hud-panel {
+            display: flex;
+            justify-content: space-between;
+            width: 800px;
+            max-width: 100%;
+            margin-bottom: 10px;
+            color: white;
+            font-family: 'Segoe UI', monospace;
+            font-weight: bold;
+            font-size: 1.2rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .overlay-screen {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            border: 2px solid #667eea;
+            backdrop-filter: blur(5px);
+            z-index: 10;
+        }
+
+        .controls-hint {
+            margin-top: 15px;
+            color: #ccc;
+            font-size: 0.9em;
+            text-align: center;
+        }
+        
+        .key-badge {
+            display: inline-block;
+            background: #444;
+            padding: 2px 8px;
+            border-radius: 4px;
+            border-bottom: 2px solid #222;
+            font-family: monospace;
+            margin: 0 2px;
+        }
+    </style>
+</head>
+<body style="background: #1a1a2e; min-height: 100vh;">
+    <div class="container">
+        <header style="color: white; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1 style="margin:0;">🚀 Gravity Defender</h1>
+                    <p style="opacity: 0.7; margin:0;">Cloud-Calculated Physics Engine</p>
+                </div>
+                <button onclick="window.location.href='/'" class="secondary">⬅️ Dashboard</button>
+            </div>
+        </header>
+
+        <div class="game-wrapper" style="position: relative; margin-top: 20px;">
+            
+            <div id="startScreen" class="overlay-screen">
+                <h2 style="font-size: 2.5rem; margin-bottom: 10px;">Mission Start</h2>
+                <p style="font-size: 1.2rem; margin-bottom: 20px;">Kosten: <span style="color: #ffc107;">1 Gem 💎</span></p>
+                
+                <div style="text-align: left; background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; margin-bottom: 25px;">
+                    <p>🎯 <strong>Ziel:</strong> Erreiche Score 10 und lande auf der Plattform.</p>
+                    <p>🕹️ <strong>Steuerung:</strong></p>
+                    <ul style="list-style: none; padding: 0;">
+                        <li><span class="key-badge">⬆️</span> Schub</li>
+                        <li><span class="key-badge">⬅️</span> <span class="key-badge">➡️</span> Steuern</li>
+                        <li><span class="key-badge">SPACE</span> Schießen</li>
+                    </ul>
+                </div>
+
+                <button onclick="startGame()" class="success" style="font-size: 1.3em; padding: 12px 40px; box-shadow: 0 0 20px rgba(40, 167, 69, 0.4);">
+                    Starten 🚀
+                </button>
+                <p id="errorMsg" style="color: #ff6b6b; margin-top: 15px; display: none;"></p>
+            </div>
+
+            <div id="resultScreen" class="overlay-screen hidden">
+                <h2 id="resultTitle" style="font-size: 3rem; margin-bottom: 10px;">GAME OVER</h2>
+                <div id="resultDetails" style="font-size: 1.2rem; margin-bottom: 20px;"></div>
+                <button onclick="location.reload()" class="secondary">Nochmal spielen 🔄</button>
+            </div>
+
+            <div class="hud-panel">
+                <span>🛡️ Score: <span id="scoreDisplay" style="color: #00d2ff;">0</span></span>
+                <span>🚦 Status: <span id="statusDisplay">BEREIT</span></span>
+            </div>
+
+            <canvas id="gameCanvas" width="800" height="600"></canvas>
+            
+            <div class="controls-hint">
+                Physik wird zu 100% im Python-Backend berechnet • Rendering im Browser
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/common.js"></script>
+    <script src="/static/game.js"></script>
+</body>
+</html>
