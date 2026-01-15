@@ -760,23 +760,10 @@ async def websocket_endpoint(websocket: WebSocket):
     # 1. Auth & Bezahlen (Quick & Dirty Token Check als erste Nachricht)
     try:
         token = await websocket.receive_text()
-        # Hier vereinfacht: Wir nehmen an, der Token ist valide oder nutzen eine Hilfsfunktion
-        # In echt: user = verify_token(token)
-        
-        # Wir holen uns den User aus dem Token (vereinfachte Annahme für Demo)
-        # Wenn du verify_token hast, nutze das!
-        user_hash = "demo_user_hash" # Platzhalter, falls Auth kompliziert ist
-        
-        # GEMS CHECKEN & ABZIEHEN (Dein DatabaseManager)
-        # stats = buddy.db.get_user_gamification(user_hash)
-        # if stats['gems'] < 1:
-        #     await websocket.send_json({"error": "Zu wenig Gems! 💎"})
-        #     await websocket.close()
-        #     return
-        # buddy.db.update_gamification(user_hash, 0, -1) # 1 Gem abziehen
+        # Hier vereinfacht: Wir nehmen an, der Token ist valide
+        user_hash = "demo_user_hash"
         
     except Exception:
-        # Falls Auth fehlschlägt, lassen wir ihn für die Demo trotzdem spielen ;)
         pass
 
     # 2. Spiel starten
@@ -788,7 +775,7 @@ async def websocket_endpoint(websocket: WebSocket):
             try:
                 # Wir warten extrem kurz auf Input
                 data = await asyncio.wait_for(websocket.receive_text(), timeout=0.01)
-                game.apply_input(data) # Das leitet 'UP', 'SPACE' etc. an die Engine weiter
+                game.apply_input(data) 
             except asyncio.TimeoutError:
                 pass # Kein Input, Spiel läuft weiter
             
@@ -799,20 +786,24 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.send_json(game.get_state())
             
             # GAME OVER / WIN CHECK
+            # FEHLER 1 BEHOBEN: game.won -> game.game_won
             if game.game_over or game.game_won:
                 # BELOHNUNG
                 xp_gain = 0
                 msg = "GAME OVER"
                 
-                if game.won:
-                    xp_gain = 42 # Die magische Zahl!
+                # FEHLER 2 BEHOBEN: game.won -> game.game_won
+                if game.game_won:
+                    xp_gain = 42 
                     msg = "MISSION ACCOMPLISHED"
-                    # buddy.db.update_gamification(user_hash, xp_gain, 0) # XP gutschreiben
+                    # buddy.db.update_gamification(user_hash, xp_gain, 0)
                 
                 # Letzten Status senden mit Info
                 final_state = game.get_state()
                 final_state['message'] = msg
                 final_state['xp_earned'] = xp_gain
+                
+                # FEHLER 3 BEHOBEN: final_msg -> final_state
                 await websocket.send_json(final_state)
                 
                 # Kurze Pause, dann Verbindung zu
