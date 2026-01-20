@@ -41,7 +41,9 @@ class DatabaseManager:
                     school_type TEXT,
                     state TEXT DEFAULT 'Bayern',
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    last_login TIMESTAMP
+                    last_login TIMESTAMP,
+                    xp INTEGER DEFAULT 0,
+                    gems INTEGER DEFAULT 5
                 )
             ''')
             
@@ -210,6 +212,7 @@ class DatabaseManager:
                     FOREIGN KEY (user_hash) REFERENCES user_profiles (user_hash)
                 )
             ''')
+
             
             conn.commit()
             print("✅ Datenbank: Tabellen initialisiert")
@@ -638,5 +641,36 @@ class DatabaseManager:
                 WHERE user_hash = ? AND subject = ? 
                 ORDER BY created_at DESC LIMIT ?
             ''', (user_hash, subject, limit)).fetchall()
+        finally:
+            conn.close()
+
+
+    # === Gameification (XP, Gems) ===
+    def get_user_gamification(self, username):
+        """Holt XP und Gems"""
+        conn = self.get_connection()
+        try:
+            # Wir holen xp und gems (und setzen Default 0/5 falls NULL)
+            cursor = conn.execute('''
+                SELECT COALESCE(xp, 0), COALESCE(gems, 5) 
+                FROM users WHERE username = ?
+            ''', (username,))
+            return cursor.fetchone() # (xp, gems)
+        finally:
+            conn.close()
+
+    def update_gamification(self, username, xp_delta, gems_delta):
+        """Ändert XP und Gems (+ oder -)"""
+        conn = self.get_connection()
+        try:
+            # Update durchführen
+            conn.execute('''
+                UPDATE users 
+                SET xp = COALESCE(xp, 0) + ?, 
+                    gems = COALESCE(gems, 5) + ?
+                WHERE username = ?
+            ''', (xp_delta, gems_delta, username))
+            conn.commit()
+            return True
         finally:
             conn.close()

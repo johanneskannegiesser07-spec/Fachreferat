@@ -1,202 +1,286 @@
 // frontend/game.js
 
+console.log("Game Script geladen! (High Fidelity Version)");
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
+// UI Elemente
+const startScreen = document.getElementById('startScreen');
+const resultScreen = document.getElementById('resultScreen');
+const hud = document.getElementById('hud');
+const errorMsg = document.getElementById('errorMsg');
+
 let ws = null;
 let isGameRunning = false;
+let particles = [];
+let stars = [];
 
-// Tasten-Status für Input
-const keys = {
-    ArrowUp: false,
-    ArrowLeft: false,
-    ArrowRight: false,
-    Space: false
-};
+// Sterne initialisieren
+for (let i = 0; i < 80; i++) {
+    stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        size: Math.random() * 2,
+        alpha: Math.random()
+    });
+}
 
-// Event Listeners für Tasten
+// Input Status
+const keys = { ArrowUp: false, ArrowLeft: false, ArrowRight: false, Space: false };
+
 document.addEventListener('keydown', (e) => {
-    if (e.code === 'Space') keys.Space = true;
-    if (e.code === 'ArrowUp') keys.ArrowUp = true;
-    if (e.code === 'ArrowLeft') keys.ArrowLeft = true;
-    if (e.code === 'ArrowRight') keys.ArrowRight = true;
-    
-    // Verhindert Scrollen bei Pfeiltasten
-    if(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+    if (['ArrowUp', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
         e.preventDefault();
+        keys[e.code] = true;
+    }
+});
+document.addEventListener('keyup', (e) => {
+    if (['ArrowUp', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+        keys[e.code] = false;
     }
 });
 
-document.addEventListener('keyup', (e) => {
-    if (e.code === 'Space') keys.Space = false;
-    if (e.code === 'ArrowUp') keys.ArrowUp = false;
-    if (e.code === 'ArrowLeft') keys.ArrowLeft = false;
-    if (e.code === 'ArrowRight') keys.ArrowRight = false;
-});
+// === HAUPTFUNKTION ===
 
 async function startGame() {
-    const token = localStorage.getItem('token');
-    if (!token) {
-        window.location.href = '/login.html';
-        return;
-    }
+    console.log("Start Button gedrückt...");
+    try {
+        const token = localStorage.getItem('token');
+        errorMsg.style.display = 'none';
 
-    const errorMsg = document.getElementById('errorMsg');
-    errorMsg.style.display = 'none';
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/game`;
 
-    // Protokoll (ws oder wss)
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/game`;
+        if (ws) ws.close();
+        ws = new WebSocket(wsUrl);
 
-    ws = new WebSocket(wsUrl);
-
-    ws.onopen = () => {
-        // 1. Authentifizierung senden
-        ws.send(token);
-    };
-
-    ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-
-        // Fehlerhandling (z.B. zu wenig Gems)
-        if (data.error) {
-            errorMsg.innerText = data.error;
-            errorMsg.style.display = 'block';
-            ws.close();
-            return;
-        }
-
-        // Spielstart bestätigt?
-        if (!isGameRunning && data.status === "playing") {
+        ws.onopen = () => {
+            if (token) ws.send(token);
+            startScreen.classList.add('hidden');
+            resultScreen.classList.add('hidden');
+            hud.classList.remove('hidden');
             isGameRunning = true;
-            document.getElementById('startScreen').classList.add('hidden');
-        }
+        };
 
-        // Game Over / Sieg Handling
-        if (data.status === "game_over" || data.status === "won") {
-            handleGameEnd(data);
-            return;
-        }
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.error) { showError(data.error); return; }
 
-        // === RENDERING LOOP ===
-        if (isGameRunning) {
-            drawGame(data);
-            // Input senden (Einfachheitshalber senden wir den gesamten Key-State)
-            sendInput();
-            
-            // HUD Update
-            document.getElementById('scoreDisplay').innerText = data.score;
-            document.getElementById('statusDisplay').innerText = data.platform_active ? "LANDEN! 🔽" : "ÜBERLEBEN 🛡️";
-            if(data.platform_active) document.getElementById('statusDisplay').style.color = "#28a745";
-        }
-    };
+                if (isGameRunning) {
+                    drawGame(data);
+                    sendInput();
+                    updateHUD(data);
+                }
 
-    ws.onclose = () => {
-        console.log("Verbindung getrennt");
-        isGameRunning = false;
-    };
-    
-    ws.onerror = (e) => {
-        console.error("WebSocket Fehler", e);
-        errorMsg.innerText = "Verbindungsfehler zum Server.";
-        errorMsg.style.display = 'block';
-    };
+                if (data.status === "game_over" || data.status === "won") {
+                    endGame(data);
+                }
+            } catch (e) { console.error(e); }
+        };
+
+        ws.onerror = (e) => showError("Verbindung fehlgeschlagen!");
+        ws.onclose = () => { if (isGameRunning) isGameRunning = false; };
+
+    } catch (err) {
+        showError("Fehler: " + err.message);
+    }
 }
+window.startGame = startGame;
+
+// === HELFER ===
 
 function sendInput() {
     if (ws && ws.readyState === WebSocket.OPEN) {
-        // Wir senden ein JSON mit den gedrückten Tasten
         ws.send(JSON.stringify(keys));
     }
 }
 
-function drawGame(state) {
-    // 1. Hintergrund löschen
-    ctx.fillStyle = '#0f0f1a';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // 2. Sterne (Optionaler Effekt, statisch oder vom Server gesendet)
-    // Hier einfachheitshalber weggelassen oder einfache Punkte
-
-    // 3. Rakete zeichnen
-    ctx.save();
-    ctx.translate(state.rocket.x, state.rocket.y);
-    ctx.rotate(state.rocket.angle); // Rotation vom Server!
-    
-    // Raketenkörper
-    ctx.fillStyle = '#00d2ff';
-    ctx.beginPath();
-    ctx.moveTo(0, -15);
-    ctx.lineTo(10, 10);
-    ctx.lineTo(-10, 10);
-    ctx.fill();
-    
-    // Flamme (nur wenn Schub)
-    if (keys.ArrowUp) {
-        ctx.fillStyle = '#ff6b6b';
-        ctx.beginPath();
-        ctx.moveTo(-5, 10);
-        ctx.lineTo(5, 10);
-        ctx.lineTo(0, 20 + Math.random() * 5);
-        ctx.fill();
-    }
-    ctx.restore();
-
-    // 4. Aliens zeichnen
-    ctx.fillStyle = '#ff4757';
-    state.aliens.forEach(alien => {
-        ctx.fillRect(alien.x, alien.y, alien.w, alien.h);
-        // Kleine Augen
-        ctx.fillStyle = 'white';
-        ctx.fillRect(alien.x + 5, alien.y + 10, 5, 5);
-        ctx.fillRect(alien.x + 20, alien.y + 10, 5, 5);
-        ctx.fillStyle = '#ff4757'; // Zurücksetzen
-    });
-
-    // 5. Projektile zeichnen
-    ctx.fillStyle = '#ffff00';
-    state.bullets.forEach(bullet => {
-        ctx.beginPath();
-        ctx.arc(bullet.x, bullet.y, 3, 0, Math.PI * 2);
-        ctx.fill();
-    });
-
-    // 6. Plattform zeichnen (wenn aktiv)
-    if (state.platform && state.platform.active) {
-        ctx.fillStyle = '#28a745';
-        ctx.fillRect(state.platform.x, state.platform.y, state.platform.w, state.platform.h);
-        
-        // Landebereich markieren
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-        ctx.fillRect(state.platform.x + 5, state.platform.y, state.platform.w - 10, 5);
-        
-        ctx.fillStyle = 'white';
-        ctx.font = '12px Arial';
-        ctx.fillText("LAND HERE", state.platform.x + 15, state.platform.y + 20);
+function updateHUD(data) {
+    document.getElementById('scoreDisplay').innerText = `SCORE: ${data.score}`;
+    const statusEl = document.getElementById('statusDisplay');
+    if (data.platform_active) {
+        statusEl.innerText = "LANDEN! 🔽"; statusEl.style.color = "#2ecc71";
+    } else {
+        statusEl.innerText = "ÜBERLEBEN 🛡️"; statusEl.style.color = "#fff";
     }
 }
 
-function handleGameEnd(data) {
+function endGame(data) {
     isGameRunning = false;
-    const screen = document.getElementById('resultScreen');
+    hud.classList.add('hidden');
+    resultScreen.classList.remove('hidden');
     const title = document.getElementById('resultTitle');
     const details = document.getElementById('resultDetails');
-    
-    screen.classList.remove('hidden');
-    
+
     if (data.status === "won") {
-        title.innerText = "MISSION ERFÜLLT! 🏆";
-        title.style.color = "#28a745";
-        details.innerHTML = `
-            <p>Sicher gelandet!</p>
-            <p style="font-size: 1.5em; margin-top: 10px;">+42 XP erhalten!</p>
-        `;
+        title.innerText = "MISSION ERFÜLLT! 🏆"; title.className = "win-text";
+        details.innerHTML = `Perfekte Landung!<br>+42 XP erhalten.`;
     } else {
-        title.innerText = "ABGESTÜRZT 💥";
-        title.style.color = "#dc3545";
-        details.innerHTML = `
-            <p>Score: ${data.score}</p>
-            <p>Viel Glück beim nächsten Mal!</p>
-        `;
+        title.innerText = "GESCHEITERT 💥"; title.className = "lose-text";
+        details.innerHTML = `Score: ${data.score}`;
     }
+}
+
+function showError(msg) {
+    if (ws) ws.close();
+    isGameRunning = false;
+    startScreen.classList.remove('hidden');
+    hud.classList.add('hidden');
+    errorMsg.innerText = msg;
+    errorMsg.style.display = 'block';
+}
+
+// === RENDERING (High Fidelity Version) ===
+
+class Particle {
+    constructor(x, y) {
+        this.x = x + (Math.random() - 0.5) * 10;
+        this.y = y;
+        this.vx = (Math.random() - 0.5) * 2;
+        this.vy = Math.random() * 4 + 2;
+        this.life = 1.0;
+        this.decay = Math.random() * 0.05 + 0.02;
+    }
+    update() { this.x += this.vx; this.y += this.vy; this.life -= this.decay; }
+    draw(ctx) {
+        ctx.globalAlpha = Math.max(0, this.life);
+        ctx.fillStyle = `rgb(255, ${Math.floor(this.life * 200)}, 0)`;
+        ctx.beginPath(); ctx.arc(this.x, this.y, 3, 0, Math.PI*2); ctx.fill();
+        ctx.globalAlpha = 1.0;
+    }
+}
+
+function drawGame(state) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Sterne
+    ctx.fillStyle = "#fff";
+    stars.forEach(s => {
+        ctx.globalAlpha = Math.random() * 0.5 + 0.3;
+        ctx.fillRect(s.x, s.y, s.size, s.size);
+    });
+    ctx.globalAlpha = 1.0;
+
+    // Plattform (Mit Gradient & Glow)
+    if (state.platform) {
+        let p = state.platform;
+        ctx.save();
+        
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = "#4caf50";
+
+        let pGrad = ctx.createLinearGradient(0, p.y - p.height / 2, 0, p.y + p.height / 2);
+        pGrad.addColorStop(0, "#2e7d32");
+        pGrad.addColorStop(1, "#1b5e20");
+
+        ctx.fillStyle = pGrad;
+        // ZENTRIERT ZEICHNEN
+        ctx.fillRect(p.x - p.width / 2, p.y - p.height / 2, p.width, p.height);
+
+        // Lichter
+        ctx.fillStyle = "#a5d6a7";
+        ctx.fillRect(p.x - p.width / 2 + 5, p.y - p.height / 2 + 2, p.width - 10, 4);
+
+        ctx.restore();
+    }
+
+    // Aliens (Mit Gradient & Glow)
+    state.aliens.forEach(a => drawAlien(a.x, a.y, a.width, a.height));
+
+    // Rakete (Mit Gradient)
+    if (!state.rocket.dead) {
+        if (keys.ArrowUp) { 
+            for(let i=0; i<3; i++) particles.push(new Particle(state.rocket.x, state.rocket.y + 15));
+        }
+        drawRocket(state.rocket.x, state.rocket.y, state.rocket.angle);
+    } else {
+        // Explosion
+        ctx.fillStyle = "orange";
+        ctx.beginPath(); ctx.arc(state.rocket.x, state.rocket.y, 30, 0, Math.PI * 2); ctx.fill();
+        for(let i=0; i<5; i++) particles.push(new Particle(state.rocket.x, state.rocket.y));
+    }
+
+    // Partikel
+    particles.forEach((p, i) => {
+        p.update();
+        p.draw(ctx);
+        if (p.life <= 0) particles.splice(i, 1);
+    });
+
+    // Bullets (Mit Glow)
+    ctx.save();
+    ctx.shadowBlur = 5;
+    ctx.shadowColor = "#f00";
+    ctx.fillStyle = "#ff5555";
+    state.bullets.forEach(b => {
+        ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, Math.PI*2); ctx.fill();
+    });
+    ctx.restore();
+}
+
+function drawRocket(x, y, angle) {
+    ctx.save();
+    ctx.translate(x, y);
+    // Rotation ist wichtig!
+    ctx.rotate(angle); 
+
+    // 3D-Body Gradient (Das macht es zur Textur!)
+    let grad = ctx.createLinearGradient(-10, 0, 10, 0);
+    grad.addColorStop(0, '#ccc');
+    grad.addColorStop(0.5, '#fff');
+    grad.addColorStop(1, '#999');
+
+    ctx.fillStyle = grad;
+
+    // Rumpf
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 10, 20, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Cockpit
+    ctx.fillStyle = "#00a8ff";
+    ctx.beginPath(); ctx.arc(0, -5, 4, 0, Math.PI * 2); ctx.fill();
+
+    // Flügel
+    ctx.fillStyle = "#d63031";
+    ctx.beginPath();
+    ctx.moveTo(-10, 10); ctx.lineTo(-15, 20); ctx.lineTo(-5, 15); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(10, 10); ctx.lineTo(15, 20); ctx.lineTo(5, 15); ctx.fill();
+
+    // Düse
+    ctx.fillStyle = "#333";
+    ctx.fillRect(-5, 18, 10, 4);
+
+    ctx.restore();
+}
+
+function drawAlien(x, y, w, h) {
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Glow Effekt (Grüner Schein)
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = "#00ff00";
+
+    // Kuppel mit Radial Gradient
+    let domeGrad = ctx.createRadialGradient(0, -5, 0, 0, -5, 10);
+    domeGrad.addColorStop(0, "#aaffaa");
+    domeGrad.addColorStop(1, "#00aa00");
+    ctx.fillStyle = domeGrad;
+    ctx.beginPath(); ctx.arc(0, -5, 10, Math.PI, 0); ctx.fill();
+
+    // Untertasse
+    ctx.fillStyle = "#555";
+    ctx.beginPath(); ctx.ellipse(0, 0, 18, 6, 0, 0, Math.PI * 2); ctx.fill();
+
+    // Lichter
+    ctx.fillStyle = "#ffff00";
+    for (let i = -2; i <= 2; i++) {
+        ctx.beginPath(); ctx.arc(i * 6, 2, 2, 0, Math.PI * 2); ctx.fill();
+    }
+
+    ctx.restore();
 }

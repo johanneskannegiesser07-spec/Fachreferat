@@ -640,3 +640,28 @@ class UniversalLernBuddy:
             return "Entschuldigung, ich habe gerade Verbindungsprobleme. Frag mich gleich nochmal!"
             
         return response
+
+    # === GAMIFICATION LOGIC ===
+
+    def get_user_stats(self, username):
+        """Holt XP und Gems"""
+        res = self.db.get_user_gamification(username)
+        if res:
+            return {"xp": res[0], "gems": res[1]}
+        return {"xp": 0, "gems": 0}
+
+    def can_play_game(self, username):
+        """Prüft ob genug Gems da sind"""
+        stats = self.get_user_stats(username)
+        return stats["gems"] > 0
+
+    def pay_for_game(self, username):
+        """Zieht 1 Gem ab"""
+        if self.can_play_game(username):
+            self.db.update_gamification(username, 0, -1) # -1 Gem
+            return True
+        return False
+
+    def award_game_win(self, username):
+        """Gibt XP bei Sieg"""
+        self.db.update_gamification(username, 42, 0) # +42 XP

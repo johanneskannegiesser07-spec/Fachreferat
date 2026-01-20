@@ -241,8 +241,9 @@ class AIEngine:
     }}
     """
         return self._robust_api_call(prompt, response_format="json")
+        pass
 
-    def generate_flashcards(self, subject, topic, count=5):
+    def generate_flashcards(self, subject, topic, count=5, grades_context=""):
         """
         🃏 Generiert Lern-Karteikarten (Vorderseite/Rückseite)
         """

@@ -757,68 +757,140 @@ async def serve_chat():
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     
-    # 1. Auth & Bezahlen (Quick & Dirty Token Check als erste Nachricht)
-    try:
-        token = await websocket.receive_text()
-        # Hier vereinfacht: Wir nehmen an, der Token ist valide
-        user_hash = "demo_user_hash"
-        
-    except Exception:
-        pass
+    user_username = None
 
-    # 2. Spiel starten
+    # 1. AUTHENTIFIZIERUNG & GEM CHECK
+    try:
+        # Der erste Frame MUSS der Token sein
+        token = await websocket.receive_text()
+        
+        # Token verifizieren
+        payload = verify_token(token)
+        if not payload:
+            await websocket.send_json({"error": "Auth fehlgeschlagen"})
+            await websocket.close()
+            return
+            
+        user_username = payload['sub']
+        
+        # GEM CHECK: Hat der User genug Gems?
+        if not buddy.can_play_game(user_username):
+            await websocket.send_json({"error": "Nicht genügend Gems! 💎"})
+            # Kurze Pause, damit Client die Nachricht empfängt
+            await asyncio.sleep(1) 
+            await websocket.close()
+            return
+
+        # BEZAHLEN: 1 Gem abziehen
+        buddy.pay_for_game(user_username)
+        print(f"🎮 Spiel gestartet für {user_username} (-1 Gem)")
+        
+        # Status update an Client senden (damit Anzeige aktualisiert wird)
+        new_stats = buddy.get_user_stats(user_username)
+        await websocket.send_json({"type": "stats_update", "gems": new_stats['gems']})
+
+    except Exception as e:
+        print(f"WS Auth Error: {e}")
+        await websocket.close()
+        return
+
+    # 2. SPIEL LOOP STARTEN
     game = GameSession()
+    reward_claimed = False  # <--- NEU: Merker, ob Belohnung schon kassiert wurde
     
     try:
         while True:
-            # INPUT (Non-Blocking Hack für flüssiges Spiel)
+            # INPUT (Non-Blocking)
             try:
-                # Wir warten extrem kurz auf Input
                 data = await asyncio.wait_for(websocket.receive_text(), timeout=0.01)
-                game.apply_input(data) 
+                
+                try:
+                    input_data = json.loads(data)
+                    # RESTART COMMAND
+                    if input_data.get("command") == "restart":
+                        # Erneut bezahlen für Neustart?
+                        if buddy.pay_for_game(user_username):
+                             game.reset()
+                             reward_claimed = False # <--- WICHTIG: Flag zurücksetzen für neue Runde!
+                             
+                             # Neue Stats senden (Gems abgezogen)
+                             new_stats = buddy.get_user_stats(user_username)
+                             await websocket.send_json({"type": "stats_update", "gems": new_stats['gems']})
+                             continue
+                        else:
+                             await websocket.send_json({"error": "Keine Gems mehr für Neustart!"})
+                             # Optional: break hier, wenn man rausfliegen soll
+                    
+                    # Normaler Input
+                    game.apply_input("UP", input_data.get("ArrowUp", False))
+                    game.apply_input("LEFT", input_data.get("ArrowLeft", False))
+                    game.apply_input("RIGHT", input_data.get("ArrowRight", False))
+                    game.apply_input("SPACE", input_data.get("Space", False))
+                except:
+                    pass
             except asyncio.TimeoutError:
-                pass # Kein Input, Spiel läuft weiter
+                pass 
             
             # PHYSIK UPDATE
             game.update()
             
-            # STATE SENDEN
-            await websocket.send_json(game.get_state())
+            # STATE SENDEN (Normaler Loop)
+            state = game.get_state()
             
-            # GAME OVER / WIN CHECK
-            # FEHLER 1 BEHOBEN: game.won -> game.game_won
+            if state["game_won"]:
+                state["status"] = "won"
+            elif state["game_over"]:
+                state["status"] = "game_over"
+            else:
+                state["status"] = "playing"
+
+            await websocket.send_json(state)
+            
+            # === ENDE CHECK & BELOHNUNG ===
             if game.game_over or game.game_won:
-                # BELOHNUNG
-                xp_gain = 0
-                msg = "GAME OVER"
                 
-                # FEHLER 2 BEHOBEN: game.won -> game.game_won
-                if game.game_won:
-                    xp_gain = 42 
-                    msg = "MISSION ACCOMPLISHED"
-                    # buddy.db.update_gamification(user_hash, xp_gain, 0)
+                # BUGFIX: Nur ausführen, wenn wir NOCH NICHT belohnt haben
+                if not reward_claimed:
+                    reward_claimed = True  # Sofort markieren!
+                    
+                    xp_gain = 0
+                    if game.game_won:
+                        xp_gain = 42
+                        # XP GUTSCHREIBEN (Nur 1x pro Sieg!)
+                        buddy.award_game_win(user_username)
+                        print(f"🏆 Sieg für {user_username} (+42 XP)")
+                    
+                    # Finalen Status senden mit XP Info
+                    final_state = game.get_state()
+                    final_state["status"] = "won" if game.game_won else "game_over"
+                    final_state["xp_earned"] = xp_gain
+                    
+                    # Aktuelle Stats mitsenden (fürs Frontend UI)
+                    current_stats = buddy.get_user_stats(user_username)
+                    final_state["user_gems"] = current_stats["gems"]
+                    final_state["user_xp"] = current_stats["xp"]
+
+                    await websocket.send_json(final_state)
                 
-                # Letzten Status senden mit Info
-                final_state = game.get_state()
-                final_state['message'] = msg
-                final_state['xp_earned'] = xp_gain
+                # Wir warten kurz, um CPU zu sparen, da das Spiel eh vorbei ist
+                await asyncio.sleep(0.5) 
                 
-                # FEHLER 3 BEHOBEN: final_msg -> final_state
-                await websocket.send_json(final_state)
-                
-                # Kurze Pause, dann Verbindung zu
-                await asyncio.sleep(2)
-                await websocket.close()
-                break
-                
-            # 30 FPS Takt
-            await asyncio.sleep(0.033)
+            else:
+                # 30 FPS Takt im laufenden Spiel
+                await asyncio.sleep(0.033)
             
     except Exception as e:
-        print(f"Game Error: {e}")
-        try:
-            await websocket.close()
+        print(f"Game Loop Error: {e}")
+        try: await websocket.close()
         except: pass
+
+@app.get("/api/user-stats")
+async def get_user_stats(current_user: dict = Depends(get_current_user)):
+    if not buddy: raise HTTPException(status_code=500)
+    stats = buddy.get_user_stats(current_user['sub'])
+    return {"success": True, "data": stats}
+
+
 
 # === START-SKRIPT ===
 
