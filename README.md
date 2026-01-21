@@ -1,65 +1,52 @@
-# 🤖 KI-Lern-Buddy
+# 🤖 KI-Lern-Buddy & Gravity Defender
 
-Ein adaptiver, KI-gestützter Lernbegleiter für Schüler. Entwickelt im Rahmen eines Fachreferats (FOS 12).
+> **Fachreferat FOS 12** > Eine adaptive Lernplattform mit integrierter Gamification und hybrider KI-Engine.
 
-## 📋 Über das Projekt
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-Modern-green)
+![AI](https://img.shields.io/badge/AI-Hybrid%20(Cloud%2FLocal)-purple)
+![Gamification](https://img.shields.io/badge/Game-Gravity%20Defender-orange)
 
-Der KI-Lern-Buddy ist eine Webanwendung, die Schülern hilft, effizienter zu lernen. Anders als statische Lernprogramme nutzt dieses System künstliche Intelligenz (LLMs), um:
-1.  Den individuellen **Lernstil** zu erkennen.
-2.  **Maßgeschneiderte Übungen** zu generieren.
-3.  Tests intelligent auszuwerten und **motivierendes Feedback** zu geben (wie ein Coach).
+## 📋 Projektbeschreibung
 
-## ✨ Features
+Der **KI-Lern-Buddy** ist mehr als nur ein Vokabeltrainer. Es ist ein intelligentes Ökosystem, das Schülern hilft, effizienter zu lernen, indem es Lerninhalte personalisiert und Erfolge spielerisch belohnt.
 
-* **Adaptives Test-System:** Generiert Fragen basierend auf dem Wissensstand.
-* **KI-Coach:** Gibt nicht nur Noten, sondern erklärt Fehler und motiviert ("Gamification").
-* **Review & Retry:** Wiederholung spezifischer Tests zur Fehlerkorrektur.
-* **Analytics Dashboard:** Visualisierung von Lernfortschritt und Schwachstellen.
-* **Technologie:** Modernes Backend mit FastAPI & SQLite, Frontend mit Vanilla JS.
+Das System verbindet drei Kernkomponenten:
+1.  **Lern-Engine:** Analysiert Noten & Uploads (PDFs), um maßgeschneiderte Übungen zu erstellen.
+2.  **Hybrid AI Engine:** Nutzt Cloud-LLMs (OpenRouter) oder lokale Modelle (Ollama) für Datenschutz & Flexibilität.
+3.  **Gamification (Gravity Defender):** Ein integriertes Arcade-Spiel, das mit "Gems" (durch Lernen verdient) freigeschaltet wird.
+
+## ✨ Haupt-Features
+
+### 🧠 Intelligentes Lernen
+* **Adaptives Test-System:** Generiert Fragen basierend auf dem aktuellen Wissensstand.
+* **PDF-Analyse (RAG):** Schüler können Hefteinträge hochladen; die KI erstellt daraus Zusammenfassungen und Fragen.
+* **KI-Coach:** Gibt motivierendes Feedback statt nur "Falsch/Richtig".
+
+### 🎮 Gamification
+* **Währungssystem:** Löse Aufgaben -> Erhalte **Gems** 💎 und **XP** ✨.
+* **Gravity Defender:** Ein WebSocket-basiertes Echtzeit-Spiel im Browser.
+    * *Mechanik:* Steuere eine Rakete, weiche Aliens aus und lande sicher.
+    * *Belohnung:* Siege im Spiel bringen massive XP-Boni.
+* **Wissens-Graph:** Visualisierung der verknüpften Fächer und Kompetenzen.
 
 ## 🛠️ Technologie-Stack
 
-* **Backend:** Python 3.x, FastAPI, Uvicorn
-* **Datenbank:** SQLite (mit WAL-Mode für Performance)
-* **Frontend:** HTML5, CSS3, JavaScript (Asynchron)
-* **KI-Engine:** OpenRouter API (DeepSeek Model)
-* **Security:** JWT-Tokens & Bcrypt Password Hashing
+| Bereich | Technologie | Details |
+| :--- | :--- | :--- |
+| **Backend** | Python, FastAPI | Asynchrone API, WebSockets für das Spiel |
+| **Datenbank** | SQLite | Speichert User, Noten, Lernfortschritt (WAL-Mode aktiv) |
+| **Frontend** | HTML5, CSS3, JS | Vanilla JS (kein Framework-Overhead), Canvas API für das Spiel |
+| **KI / AI** | Hybrid Engine | Support für OpenRouter (Cloud) & Ollama (Local/VPN) |
+| **Security** | OAuth2 / JWT | Sichere Authentifizierung & Password Hashing |
 
 ## 🚀 Installation & Start
 
-1.  **Repository klonen**
-    ```bash
-    git clone [https://github.com/DeinUser/fachreferat.git](https://github.com/DeinUser/fachreferat.git)
-    cd fachreferat
-    ```
+### Voraussetzungen
+* Python 3.10 oder höher
+* (Optional) Ollama für lokalen KI-Betrieb
 
-2.  **Abhängigkeiten installieren**
-    ```bash
-    pip install -r backend/requirements.txt
-    ```
-
-3.  **Environment Variablen setzen**
-    Erstelle eine `.env` Datei im `backend/` Ordner:
-    ```env
-    OPENROUTER_API_KEY=dein_api_key_hier
-    SECRET_KEY=ein_sicherer_zufalls_string
-    ```
-
-4.  **Server starten**
-    ```bash
-    python backend/main.py
-    ```
-    Der Server läuft unter: `http://localhost:8000`
-
-## 📂 Projektstruktur
-
-* `/backend`
-    * `main.py`: API-Endpunkte und Routing
-    * `database.py`: Datenbank-Manager (SQL-Logik)
-    * `universal_lern_buddy.py`: Geschäftslogik & KI-Steuerung
-    * `auth.py`: Sicherheitsfunktionen (Hashing, Tokens)
-* `/frontend`: Benutzeroberfläche (HTML/CSS/JS)
-
-## 👨‍💻 Autor
-
-[Dein Name] - FOS 12 Fachreferat
+### Schritt 1: Repository klonen
+```bash
+git clone [https://github.com/DeinUser/fachreferat.git](https://github.com/DeinUser/fachreferat.git)
+cd fachreferat

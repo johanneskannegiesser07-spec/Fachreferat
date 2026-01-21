@@ -1,12 +1,15 @@
+# === CORE FRAMEWORK ===
 fastapi==0.104.1
 uvicorn==0.24.0
-python-dotenv==1.0.0
-requests==2.31.0
+websockets>=12.0
+
+# === SECURITY & AUTH ===
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
-pypdf==6.6.0
 python-multipart==0.0.6
-# Optional, falls du Templates nutzt (aktuell machst du FileResponse):
-# jinja2==3.1.2
-websockets
+
+# === UTILITIES & DATA ===
+python-dotenv==1.0.0
+requests==2.31.0
+pypdf==3.17.0
