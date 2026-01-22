@@ -14,9 +14,13 @@
         <header>
             <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
                 <h1>🃏 Karteikarten</h1>
-                <button onclick="location.href='/'" class="secondary" style="font-size:0.9rem; padding:8px 15px;">🏠 Dashboard</button>
+                <!-- <button onclick="location.href='/'" class="secondary" style="font-size:0.9rem; padding:8px 15px;">🏠 Dashboard</button> -->
             </div>
             <p id="topicDisplay">Erstelle oder lade ein Set</p>
+            <div class="user-info">
+                <span id="usernameDisplay">Lade...</span>
+                <button class="logout" onclick="window.location.href='/'">📊 Dashboard</button>
+            </div>
         </header>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;">

@@ -403,6 +403,23 @@ class DatabaseManager:
         finally:
             conn.close()
 
+    def get_topic_performance(self, user_hash):
+        """
+        Holt aggregierte Performance-Daten für den Wissensgraphen.
+        Gruppiert nach Fach -> Thema.
+        Rückgabe: [(Subject, Topic, AvgScore, Count), ...]
+        """
+        conn = self.get_connection()
+        try:
+            return conn.execute('''
+                SELECT subject, topic, AVG(score) as avg_score, COUNT(*) as num_tests
+                FROM test_sessions 
+                WHERE user_hash = ? AND status = 'completed'
+                GROUP BY subject, topic
+            ''', (user_hash,)).fetchall()
+        finally:
+            conn.close()
+
     # === TESTS ===
 
     def create_test_session(self, test_id, user_hash, subject, topic, questions_json, count, start_time):
@@ -674,3 +691,4 @@ class DatabaseManager:
             return True
         finally:
             conn.close()
+

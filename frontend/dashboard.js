@@ -135,25 +135,31 @@ async function loadKnowledgeGraph() {
             };
             
             const options = {
-                nodes: {
+                    nodes: {
                     shape: 'dot',
-                    font: { size: 16, face: 'Segoe UI' },
                     borderWidth: 2,
-                    shadow: true
+                    shadow: true,
+                    font: { color: '#ffffff' } // Standard Schriftfarbe Weiß
                 },
                 edges: {
                     width: 2,
+                    color: { color: '#888888', highlight: '#4facfe' }, // Graue Verbindungen
                     smooth: { type: 'continuous' }
                 },
                 physics: {
                     enabled: true,
                     barnesHut: {
-                        gravitationalConstant: -2000,
+                        gravitationalConstant: -3000, // Zieht stärker zusammen
                         centralGravity: 0.3,
-                        springLength: 95
-                    }
+                        springLength: 120, // Etwas mehr Abstand
+                        springConstant: 0.04
+                    },
+                    stabilization: { iterations: 150 } // Verhindert Wackeln beim Start
                 },
-                interaction: { hover: true }
+                interaction: { 
+                    hover: true,
+                    tooltipDelay: 200
+                }
             };
             
             container.innerHTML = ''; // Lade-Text entfernen

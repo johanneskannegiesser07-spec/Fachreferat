@@ -365,88 +365,72 @@ class UniversalLernBuddy:
     # === GRAPH FEATURE ===
 
     def get_knowledge_graph_data(self, username):
+        """Generiert Nodes und Edges basierend auf echten DB-Daten"""
         user_hash = self.db.get_user_hash(username)
         
-        # 1. Daten holen
-        test_data = self.db.get_subject_averages(user_hash)     # [(Mathe, 80.5, 5), ...]
-        card_data = self.db.get_flashcard_counts(user_hash)     # [(Mathe, 3), ...]
+        # 1. Echte Daten aus der DB holen
+        stats = self.db.get_topic_performance(user_hash)
         
-        # 2. Daten zusammenführen (Dictionary für schnellen Zugriff)
-        subjects = {}
-        
-        # Erst Testergebnisse verarbeiten
-        for row in test_data:
-            subj, score, count = row
-            subjects[subj] = {
-                "score": score, 
-                "test_count": count, 
-                "card_count": 0
-            }
-            
-        # Dann Flashcards dazuaddieren
-        for row in card_data:
-            subj, count = row
-            if subj not in subjects:
-                # Fach existiert nur als Karteikarte (noch kein Test gemacht)
-                subjects[subj] = {"score": 0, "test_count": 0, "card_count": count}
-            else:
-                subjects[subj]["card_count"] = count
-
-        # 3. Nodes erstellen
         nodes = []
-        for subj, data in subjects.items():
-            score = data["score"]
-            total_activity = data["test_count"] + data["card_count"]
-            
-            # Farbe basiert NUR auf Test-Score (Leistung)
-            if data["test_count"] == 0:
-                color = "#6c757d" # Grau (nur gelernt, nie getestet)
-            elif score >= 80: color = "#28a745" # Grün
-            elif score >= 50: color = "#ffc107" # Gelb
-            else: color = "#dc3545" # Rot
-            
-            # Größe basiert auf Aktivität (Tests + Flashcards)
-            # Basisgröße 20 + 5 pro Aktivität (max 60)
-            size = min(60, 20 + (total_activity * 5))
-
-            nodes.append({
-                "id": subj,
-                "label": f"{subj}\n({int(score)}%)" if data["test_count"] > 0 else f"{subj}\n(Lernen)",
-                "value": size,  # Hier wirkt sich das Flashcard-Lernen aus!
-                "color": color,
-                "title": f"{data['test_count']} Tests, {data['card_count']} Lern-Sets" # Tooltip
-            })
-
-        # 4. Edges definieren (Logische Verbindungen bleiben gleich)
-        defined_connections = [
-            ("Mathe", "Physik"), ("Mathe", "Informatik"), ("Mathe", "Chemie"),
-            ("Physik", "Chemie"), ("Biologie", "Chemie"),
-            ("Deutsch", "Englisch"), ("Englisch", "Französisch"), ("Englisch", "Latein"),
-            ("Geschichte", "Politik"), ("Geschichte", "Deutsch"),
-            ("Wirtschaft", "Mathe"), ("Wirtschaft", "Politik"),
-            ("Geografie", "Wirtschaft"), ("Biologie", "Geografie")
-        ]
-        
         edges = []
-        for source, target in defined_connections:
-            if source in subjects and target in subjects:
-                # Wenn beide Fächer existieren, Linie zeichnen
-                s1 = subjects[source]["score"]
-                s2 = subjects[target]["score"]
-                
-                # Dicke der Linie (Nur wenn Tests da sind, sonst dünn)
-                if s1 > 0 and s2 > 0:
-                    width = (s1 + s2) / 40 # Dicke Linie bei guten Noten
-                else:
-                    width = 1 # Dünne Linie bei reinen Lernfächern
-                    
-                edges.append({
-                    "from": source, 
-                    "to": target,
-                    "width": width,
-                    "color": {"color": "#999", "opacity": 0.4}
+        
+        # 1. ROOT NODE (Das Zentrum)
+        nodes.append({
+            "id": "root", 
+            "label": "🧠 Mein Wissen", 
+            "color": "#ffffff", 
+            "shape": "diamond",
+            "size": 40,
+            "font": {"size": 20, "color": "#ffffff"}
+        })
+        
+        subjects_map = {} # Cache, damit wir Fächer-Nodes nicht doppelt erstellen
+        
+        for row in stats:
+            subject, topic, avg_score, count = row
+            
+            # --- FACH NODE (Level 1) ---
+            if subject not in subjects_map:
+                subj_id = f"subj_{subject}"
+                nodes.append({
+                    "id": subj_id,
+                    "label": subject,
+                    "color": "#4facfe",  # Schönes Hellblau
+                    "shape": "dot",
+                    "size": 30,
+                    "font": {"color": "#ffffff"}
                 })
-
+                # Verbindung zum Gehirn
+                edges.append({"from": "root", "to": subj_id, "length": 150})
+                subjects_map[subject] = True
+            
+            # --- THEMA NODE (Level 2) ---
+            # Farbe basierend auf Note/Score (Ampel-System)
+            if avg_score >= 80:
+                color = "#28a745" # Grün (Super!)
+            elif avg_score >= 50:
+                color = "#ffc107" # Gelb (Okay)
+            else:
+                color = "#dc3545" # Rot (Lernbedarf!)
+            
+            topic_id = f"topic_{subject}_{topic}"
+            
+            # Label zeigt Thema + Prozentzahl
+            label_text = f"{topic}\n{int(avg_score)}%"
+            
+            nodes.append({
+                "id": topic_id,
+                "label": label_text,
+                "color": color,
+                "shape": "dot",
+                # Wichtiges Detail: Größe wächst mit Anzahl der Tests!
+                "size": 15 + (count * 1.5), 
+                "font": {"size": 14, "color": "#ffffff", "strokeWidth": 2, "strokeColor": "#000000"}
+            })
+            
+            # Verbindung Fach -> Thema
+            edges.append({"from": f"subj_{subject}", "to": topic_id})
+            
         return {"nodes": nodes, "edges": edges}
 
     # === KARTEIKARTEN ===

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gravity Defender</title>
+    <link rel="stylesheet" href="/static/style.css">
     <style>
         body {
             margin: 0;
@@ -103,7 +104,14 @@
     </style>
 </head>
 <body>
-    <a href="/" class="nav-btn">🏠 Zurück zum Dashboard</a>
+        <header>
+            <div class="user-info">
+                    <span id="usernameDisplay">Lade...</span>
+                    <button class="logout" onclick="window.location.href='/'">📊 Dashboard</button>
+            </div>
+
+        </header>
+    <!-- <a href="/" class="nav-btn">🏠 Zurück zum Dashboard</a> -->
 
     <div id="gameContainer">
         <div id="startScreen" class="screen">
