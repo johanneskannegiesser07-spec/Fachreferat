@@ -12,14 +12,38 @@
 <body>
     <div class="container">
         <header>
-            <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-                <h1>🃏 Karteikarten</h1>
-                <!-- <button onclick="location.href='/'" class="secondary" style="font-size:0.9rem; padding:8px 15px;">🏠 Dashboard</button> -->
+            <div>
+                <h1>🤖 KI-Lern-Buddy</h1>
+                <p>Intelligente Lernunterstützung mit KI-Personalisierung</p>
             </div>
-            <p id="topicDisplay">Erstelle oder lade ein Set</p>
             <div class="user-info">
                 <span id="usernameDisplay">Lade...</span>
-                <button class="logout" onclick="window.location.href='/'">📊 Dashboard</button>
+                <button class="school" onclick="window.location.href='/school-setup'">🏫 Schulkonfig</button>
+                <button class="logout" onclick="logout()">Logout</button>
+            </div>
+            
+            <div class="nav_bar">
+                <button onclick="window.location.href='/'" style="background: #007bff; margin-left: 10px;">
+                Dashboard
+                </button>
+                <button onclick="window.location.href='/static/planner.html'" style="background: #17a2b8; margin-left: 10px;">
+                    📅 Lernplaner
+                </button>
+                <button onclick="window.location.href='/static/grades.html'" style="background: #e0a800; margin-left: 10px;">
+                    📊 Noten
+                </button>
+                <button onclick="window.location.href='/materials'" style="background: #fd7e14; margin-left: 10px;">
+                    📄 Material
+                </button>
+                <button onclick="window.location.href='/test'" style="background: #28a745; margin-left: 10px;">
+                    🧪 Test-Modus
+                </button>
+                <button onclick="window.location.href='/chat'" style="background: #007bff; margin-left: 10px;">
+                💬 KI-Chat
+                </button>
+                <button onclick="window.location.href='/game'" style="background: #444; margin-left: 10px; cursor: default;">
+                🎮 Spielen
+                </button>
             </div>
         </header>
 

@@ -3,57 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gravity Defender</title>
+    <title>🎮 Gravity Defender</title>
     <link rel="stylesheet" href="/static/style.css">
+    
     <style>
-        body {
-            margin: 0;
-            background: #050510;
-            color: #fff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        /* Zentrierung des Spiels */
+        #gameWrapper {
             display: flex;
             justify-content: center;
-            align-items: center;
-            height: 100vh;
-            overflow: hidden;
+            margin-top: 20px;
+            margin-bottom: 20px;
         }
 
-        /* Container für das Spiel */
         #gameContainer {
             position: relative;
             width: 800px;
             height: 600px;
-            /* Der coole Leucht-Effekt am Rand */
-            box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
-            border: 2px solid #30475e;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+            border: 2px solid #333;
             border-radius: 8px;
             background: #000;
+            overflow: hidden;
         }
 
         canvas {
             display: block;
             width: 100%;
             height: 100%;
-            /* WICHTIG: Der Hintergrund-Verlauf aus dem Test-Client */
+            /* Weltraum-Hintergrund */
             background: radial-gradient(circle at center, #1a1a2e 0%, #000000 100%);
         }
-
-        /* Navigations-Button oben links */
-        .nav-btn {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 8px 15px;
-            color: #ccc;
-            text-decoration: none;
-            border-radius: 5px;
-            font-size: 14px;
-            z-index: 100;
-            transition: all 0.3s;
-        }
-        .nav-btn:hover { background: rgba(255, 255, 255, 0.2); color: #fff; }
 
         /* Overlays (Start & Game Over) */
         .screen {
@@ -63,16 +42,19 @@
             display: flex; flex-direction: column;
             justify-content: center; align-items: center;
             z-index: 10; text-align: center;
+            color: white;
         }
         .hidden { display: none !important; }
 
-        h1 {
+        /* Überschrift im Spiel-Screen (anders als Dashboard-H1) */
+        .screen h1 {
             font-size: 3em; margin-bottom: 0.5em; text-transform: uppercase;
             letter-spacing: 3px; color: #00d2ff;
             text-shadow: 0 0 20px rgba(0, 210, 255, 0.5);
+            border-bottom: none; 
         }
 
-        /* Buttons */
+        /* Spiel-Buttons */
         .btn-primary {
             background: linear-gradient(45deg, #00d2ff, #3a7bd5);
             border: none; padding: 15px 40px; color: white;
@@ -90,59 +72,99 @@
         }
         .btn-outline:hover { border-color: #fff; color: #fff; }
 
-        /* HUD */
+        /* HUD (Score Anzeige) */
         #hud {
             position: absolute; top: 20px; right: 20px;
             text-align: right; pointer-events: none; z-index: 5;
             font-size: 1.5em; font-weight: bold;
             text-shadow: 2px 2px 0 #000;
+            color: white;
         }
-        .win-text { color: #2ecc71; }
-        .lose-text { color: #e74c3c; }
 
+        /* Tasten-Style */
         kbd { background: #333; padding: 2px 8px; border-radius: 4px; border: 1px solid #555; font-family: monospace; color: #eee; }
     </style>
 </head>
 <body>
-        <div class="Container">
-            <header>
-                <div class="user-info">
-                        <span id="usernameDisplay">Lade...</span>
-                        <button class="logout" onclick="window.location.href='/'">📊 Dashboard</button>
+    <div class="container">
+        <header>
+            <div>
+                <h1>🤖 KI-Lern-Buddy</h1>
+                <p>Intelligente Lernunterstützung mit KI-Personalisierung</p>
+            </div>
+            <div class="user-info">
+                <span id="usernameDisplay">Lade...</span>
+                <button class="school" onclick="window.location.href='/school-setup'">🏫 Schulkonfig</button>
+                <button class="logout" onclick="logout()">Logout</button>
+            </div>
+            
+            <div class="nav_bar">
+                <button onclick="window.location.href='/'" style="background: #007bff; margin-left: 10px;">
+                Dashboard
+                </button>
+                 <button onclick="window.location.href='/flashcards'" style="background: #6f42c1; margin-left: 10px;">
+                    🃏 Karteikarten
+                </button>
+                <button onclick="window.location.href='/static/planner.html'" style="background: #17a2b8; margin-left: 10px;">
+                    📅 Lernplaner
+                </button>
+                <button onclick="window.location.href='/static/grades.html'" style="background: #e0a800; margin-left: 10px;">
+                    📊 Noten
+                </button>
+                <button onclick="window.location.href='/materials'" style="background: #fd7e14; margin-left: 10px;">
+                    📄 Material
+                </button>
+                <button onclick="window.location.href='/test'" style="background: #28a745; margin-left: 10px;">
+                    🧪 Test-Modus
+                </button>
+                <button onclick="window.location.href='/chat'" style="background: #007bff; margin-left: 10px;">
+                💬 KI-Chat
+                </button>
+            </div>
+        </header>
+
+        <div id="gameWrapper">
+            <div id="gameContainer">
+                <div id="startScreen" class="screen">
+                    <h1>Gravity Defender</h1>
+                    <p style="color: #aaa; margin-bottom: 2em; line-height: 1.6;">
+                        Steuere die Rakete sicher zur Plattform.<br>
+                        <kbd>↑</kbd> Schub &nbsp; <kbd>←</kbd><kbd>→</kbd> Lenken &nbsp; <kbd>SPACE</kbd> Feuer
+                    </p>
+                    <div id="errorMsg" style="color: #ff4757; background: rgba(255,0,0,0.1); padding: 10px; border-radius: 5px; display: none; margin-bottom: 15px;"></div>
+                    <button class="btn-primary" onclick="if(window.startGame) window.startGame();">Mission Starten 🚀</button>
                 </div>
-
-            </header>
-        </div>
-    <!-- <a href="/" class="nav-btn">🏠 Zurück zum Dashboard</a> -->
-
-    <div id="gameContainer">
-        <div id="startScreen" class="screen">
-            <h1>Gravity Defender</h1>
-            <p style="color: #aaa; margin-bottom: 2em; line-height: 1.6;">
-                Steuere die Rakete sicher zur Plattform.<br>
-                <kbd>↑</kbd> Schub &nbsp; <kbd>←</kbd><kbd>→</kbd> Lenken &nbsp; <kbd>SPACE</kbd> Feuer
-            </p>
-            <div id="errorMsg" style="color: #ff4757; background: rgba(255,0,0,0.1); padding: 10px; border-radius: 5px; display: none; margin-bottom: 15px;"></div>
-            <button class="btn-primary" onclick="window.startGame()">Mission Starten 🚀</button>
-        </div>
-
-        <div id="resultScreen" class="screen hidden">
-            <h1 id="resultTitle">GAME OVER</h1>
-            <div id="resultDetails" style="font-size: 1.2em; color: #ccc; margin-bottom: 20px;"></div>
-            <button class="btn-primary" onclick="window.location.reload()">Neustart 🔄</button>
-            <br>
-            <button class="btn-outline" onclick="window.location.href='/'">Beenden 🏠</button>
+        
+                <div id="resultScreen" class="screen hidden">
+                    <h1 id="resultTitle">GAME OVER</h1>
+                    <div id="resultDetails" style="font-size: 1.2em; color: #ccc; margin-bottom: 20px;"></div>
+                    <button class="btn-primary" onclick="window.location.reload()">Neustart 🔄</button>
+                    <br>
+                    <button class="btn-outline" onclick="window.location.href='/'">Beenden 🏠</button>
+                </div>
+        
+                <div id="hud" class="hidden">
+                    <div id="scoreDisplay">SCORE: 0</div>
+                    <div id="statusDisplay">READY</div>
+                </div>
+        
+                <canvas id="gameCanvas" width="800" height="600"></canvas>
+            </div>
         </div>
 
-        <div id="hud" class="hidden">
-            <div id="scoreDisplay">SCORE: 0</div>
-            <div id="statusDisplay">READY</div>
+        <div style="text-align: center; color: #666; padding-bottom: 20px;">
+             <p>Kosten pro Spiel: <strong>1 Gem</strong> 💎 (Verdiene Gems durch Lernen!)</p>
         </div>
-
-        <canvas id="gameCanvas" width="800" height="600"></canvas>
     </div>
 
-    <script src="/static/game.js"></script>
     <script src="/static/common.js"></script>
+    <script src="/static/game.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // WICHTIG: Das lädt den Usernamen oben rechts
+            await checkAuthentication();
+        });
+    </script>
 </body>
 </html>

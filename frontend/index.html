@@ -16,22 +16,12 @@
             </div>
             <div class="user-info">
                 <span id="usernameDisplay">Lade...</span>
-                <button class="school" onclick="showSchoolSetup()">🏫 Schulkonfig</button>
+                <button class="school" onclick="window.location.href='/school-setup'">🏫 Schulkonfig</button>
                 <button class="logout" onclick="logout()">Logout</button>
-                <!-- <button onclick="toggleDebug()" style="background: #6c757d; padding: 5px 10px; font-size: 12px;">Debug</button> -->
             </div>
-
-            <!-- <button onclick="goToTest()" style="background: #28a745; margin-left: 10px;">
-                🧪 Test-Modus
-            </button>
-
-            <script>
-            function goToTest() {
-                window.location.href = '/test';
-            }
-            </script> -->
+            
             <div class="nav_bar">
-                <button onclick="window.location.href='/flashcards'" style="background: #6f42c1; margin-left: 10px;">
+                 <button onclick="window.location.href='/flashcards'" style="background: #6f42c1; margin-left: 10px;">
                     🃏 Karteikarten
                 </button>
                 <button onclick="window.location.href='/static/planner.html'" style="background: #17a2b8; margin-left: 10px;">
@@ -49,7 +39,7 @@
                 <button onclick="window.location.href='/chat'" style="background: #007bff; margin-left: 10px;">
                 💬 KI-Chat
                 </button>
-                <button onclick="window.location.href='/game'" style="background: #007bff; margin-left: 10px;">
+                <button onclick="window.location.href='/game'" style="background: #444; margin-left: 10px; cursor: default;">
                 🎮 Spielen
                 </button>
             </div>

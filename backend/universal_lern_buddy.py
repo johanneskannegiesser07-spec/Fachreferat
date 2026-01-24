@@ -305,6 +305,9 @@ class UniversalLernBuddy:
             "detailed_answers": detailed
         }
 
+        if score >=60:
+            self.db.update_gamification(self.username, 0, 1)
+
     # === HELFER & FALLBACKS ===
     
     def _calculate_time_spent(self, start_time):
