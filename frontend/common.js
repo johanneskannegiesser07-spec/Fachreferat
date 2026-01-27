@@ -113,7 +113,10 @@ function toggleDebug() {
 // === MATHE RENDERING (KaTeX) ===
 function renderMath(elementIdOrObj) {
     // Falls KaTeX noch nicht geladen ist (z.B. beim schnellen Wechsel), Abbruch
-    if (!window.renderMathInElement) return;
+    if (!window.renderMathInElement) {
+        console.warn("KaTeX renderMathInElement not loaded yet.");
+        return;
+    }
 
     const element = typeof elementIdOrObj === 'string' 
         ? document.getElementById(elementIdOrObj) 
