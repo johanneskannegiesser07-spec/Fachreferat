@@ -377,3 +377,42 @@ class AIEngine:
         
         # Antwort als reiner Text
         return self._robust_api_call(prompt, response_format="text")
+
+    def find_connections(self, subject, topic, existing_topics):
+        """
+        Sucht Verbindungen zwischen dem neuen Thema und der Liste bestehender Themen.
+        existing_topics ist eine Liste von Strings: ["Mathe: Analysis", "Physik: Mechanik", ...]
+        """
+        if not existing_topics:
+            return []
+
+        prompt = f"""
+        Ich lerne gerade '{topic}' im Fach '{subject}'.
+        Hier ist eine Liste anderer Themen, die ich bereits gelernt habe:
+        {json.dumps(existing_topics)}
+
+        Welche dieser Themen haben eine direkte, logische Wissens-Verbindung zu '{topic}'?
+        (z.B. Mathe:Integrale -> Physik:Kinematik).
+        
+        Antworte NUR mit einem validen JSON-Array von Objekten. Format:
+        [{{"target": "Fach: Thema", "reason": "Kurze Begründung"}}]
+        
+        Wenn es keine offensichtliche Verbindung gibt, antworte mit [].
+        """
+        
+        try:
+            # Hier nutzen wir deine bestehende call_llm Funktion
+            # (Passe den Modell-Namen an, falls du 'llama3.1' oder 'openrouter' nutzt)
+            response = self.call_llm(prompt, system_prompt="Du bist ein Experte für interdisziplinäres Wissen.")
+            
+            # JSON Parsing
+            clean_json = response.strip()
+            if "```json" in clean_json:
+                clean_json = clean_json.split("```json")[1].split("```")[0]
+            elif "```" in clean_json:
+                clean_json = clean_json.split("```")[1].split("```")[0]
+                
+            return json.loads(clean_json)
+        except Exception as e:
+            print(f"❌ Fehler bei Verbindungssuche: {e}")
+            return []

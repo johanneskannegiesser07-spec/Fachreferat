@@ -663,3 +663,79 @@ class UniversalLernBuddy:
     def award_game_win(self, username):
         """Gibt XP bei Sieg"""
         self.db.update_gamification(username, 42, 0) # +42 XP
+
+    # Neue Methode, die als Background Task aufgerufen wird
+    def check_and_generate_connections(self, username, subject, topic):
+        user_hash = self.db.get_user_hash(username)
+        
+        # 1. Haben wir das schon geprüft? (Performance!)
+        if self.db.has_topic_connections(user_hash, subject, topic):
+            return 
+
+        print(f"🕸️ KI sucht neue Wissens-Verbindungen für {subject}: {topic}...")
+        
+        # 2. Alle anderen Themen holen, die der User schon kann
+        stats = self.db.get_topic_performance(user_hash)
+        existing_topics = [f"{row[0]}: {row[1]}" for row in stats if row[1] != topic]
+        
+        if not existing_topics:
+            # Dummy-Eintrag, damit wir nicht immer wieder suchen
+            self.db.add_topic_connection(user_hash, subject, topic, "NONE", "NONE", "Keine anderen Themen")
+            return
+
+        # 3. KI fragen
+        connections = self.ai.find_connections(subject, topic, existing_topics)
+        
+        # 4. Speichern
+        for conn in connections:
+            target_str = conn.get("target", "")
+            if ":" in target_str:
+                t_sub, t_top = target_str.split(":", 1)
+                self.db.add_topic_connection(
+                    user_hash, 
+                    subject, topic, 
+                    t_sub.strip(), t_top.strip(), 
+                    conn.get("reason", "Verbindung erkannt")
+                )
+        
+        # Markieren, dass wir gesucht haben (auch wenn nichts gefunden wurde)
+        if not connections:
+             self.db.add_topic_connection(user_hash, subject, topic, "NONE", "NONE", "Keine Verbindung gefunden")
+
+        print(f"✅ Verbindungen gespeichert.")
+
+    # Update für die Graph-Daten Methode
+    def get_knowledge_graph_data(self, username):
+        user_hash = self.db.get_user_hash(username)
+        stats = self.db.get_topic_performance(user_hash)
+        
+        nodes = []
+        edges = []
+        
+        # ... (Dein existierender Code für Nodes & Standard-Edges) ...
+        # ... (Nodes erstellen wie vorher: Root, Fächer, Themen) ...
+        # (Kopiere hier deinen bisherigen Node-Generierungscode rein oder lass ihn stehen)
+        
+        # --- HIER EINFÜGEN: Querverbindungen laden ---
+        cross_links = self.db.get_topic_connections(user_hash)
+        
+        for link in cross_links:
+            s_sub, s_top, t_sub, t_top, reason = link
+            
+            if t_sub == "NONE": continue # Platzhalter überspringen
+            
+            # IDs rekonstruieren
+            source_id = f"topic_{s_sub}_{s_top}"
+            target_id = f"topic_{t_sub}_{t_top}"
+            
+            # Edge hinzufügen (Gestrichelt & andere Farbe für Querverbindungen)
+            edges.append({
+                "from": source_id,
+                "to": target_id,
+                "color": {"color": "#ff9f43", "opacity": 0.6}, # Orange
+                "dashes": True,
+                "title": f"🔗 {reason}", # Tooltip zeigt den Grund!
+                "width": 1
+            })
+            
+        return {"nodes": nodes, "edges": edges}

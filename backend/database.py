@@ -213,6 +213,21 @@ class DatabaseManager:
                 )
             ''')
 
+            #13 Wissensgraph-Verbindungen
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS topic_connections (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_hash TEXT,
+                    source_subject TEXT,
+                    source_topic TEXT,
+                    target_subject TEXT,
+                    target_topic TEXT,
+                    strength INTEGER,
+                    reason TEXT,
+                    created_at TIMESTAMP
+                )
+            ''')
+
             
             conn.commit()
             print("✅ Datenbank: Tabellen initialisiert")
@@ -691,4 +706,38 @@ class DatabaseManager:
             return True
         finally:
             conn.close()
+
+
+    # === KNOWLEDGE GRAPH CONNECTIONS ===
+    
+    def has_topic_connections(self, user_hash, subject, topic):
+        """Prüft, ob wir für dieses Thema schon Verbindungen gesucht haben"""
+        conn = self.get_connection()
+        count = conn.execute('''
+            SELECT COUNT(*) FROM topic_connections 
+            WHERE user_hash = ? AND source_subject = ? AND source_topic = ?
+        ''', (user_hash, subject, topic)).fetchone()[0]
+        conn.close()
+        return count > 0
+
+    def get_topic_connections(self, user_hash):
+        """Holt alle gespeicherten Querverbindungen"""
+        conn = self.get_connection()
+        rows = conn.execute('''
+            SELECT source_subject, source_topic, target_subject, target_topic, reason 
+            FROM topic_connections 
+            WHERE user_hash = ?
+        ''', (user_hash,)).fetchall()
+        conn.close()
+        return rows
+
+    def add_topic_connection(self, user_hash, s_sub, s_top, t_sub, t_top, reason):
+        conn = self.get_connection()
+        conn.execute('''
+            INSERT INTO topic_connections 
+            (user_hash, source_subject, source_topic, target_subject, target_topic, strength, reason, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (user_hash, s_sub, s_top, t_sub, t_top, 5, reason, datetime.now().isoformat()))
+        conn.commit()
+        conn.close()
 
