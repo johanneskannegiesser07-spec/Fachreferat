@@ -55,3 +55,35 @@ if __name__ == "__main__":
             add_gems(user, amount)
         except ValueError:
             print("❌ Fehler: Die Anzahl muss eine ganze Zahl sein!")
+
+
+def show_gems(username, show):
+    if not os.path.exists(DB_PATH):
+        print(f"❌ Fehler: Datenbank '{DB_PATH}' nicht gefunden! Bist du im richtigen Ordner?")
+        return
+
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    if show == true:
+        try:
+            # User suchen
+            cursor.execute("SELECT gems, xp FROM users WHERE username = ?", (username,))
+            row = cursor.fetchone()
+            
+            if not row:
+                print(f"❌ Fehler: User '{username}' nicht gefunden!")
+                return
+
+            current_gems = row[0] if row[0] is not None else 0
+            current_xp = row[1] if row[1] is not None else 0
+            
+            if show:
+                print(f"ℹ️ User '{username}':")
+                print(f"   💎 Gems: {current_gems}")
+                print(f"   ✨ XP:   {current_xp}")
+            
+        except Exception as e:
+            print(f"❌ Datenbank-Fehler: {e}")
+        finally:
+            conn.close()

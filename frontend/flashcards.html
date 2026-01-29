@@ -3,11 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🃏 Karteikarten - KI-Lern-Buddy</title>
+    <title>🃏 Karteikarten</title>
     <link rel="stylesheet" href="/static/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" integrity="sha512-fHwaWebuwA7hFwXe/4Uq665y6P/gyUxIWn qz3+f8/3g/P+Xwjpq4GhSMEG0/b8t/t9w5g/t9k/t+t/t+t+t+t" crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js" integrity="sha512-LQNx2QipEQv4QfHk8k5k/k+z+Xwjpq4GhSMEG0/b8t/t9w5g/t9k/t+t/t+t+t+t" crossorigin="anonymous" referrerpolicy="no-referrer" onerror="alert('KaTeX konnte nicht geladen werden! Bitte Internetverbindung prüfen.')"></script>
-    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js" integrity="sha512-iWiuBS5nt6r60fQaQQ+nyWpOrjc+t9w5g/t9k/t+t/t+t+t+t" crossorigin="anonymous" referrerpolicy="no-referrer" onerror="console.error('KaTeX auto-render failed to load')"></script>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body);"></script>
+
+    <style>
+        /* Flashcard Styles direkt hier oder in style.css */
+        .flashcard-container { perspective: 1000px; width: 100%; max-width: 600px; margin: 40px auto; height: 350px; }
+        .flashcard { position: relative; width: 100%; height: 100%; text-align: center; transition: transform 0.6s; transform-style: preserve-3d; cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+        .flashcard.flipped { transform: rotateY(180deg); }
+        .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 10px; padding: 20px; background: #fff; border: 2px solid #ddd; }
+        .card-front { background-color: #fff; color: #333; border-color: #007bff; }
+        .card-back { background-color: #f8f9fa; color: #333; transform: rotateY(180deg); border-color: #28a745; }
+        .controls { display: flex; justify-content: center; gap: 15px; margin-top: 20px; }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -17,79 +30,66 @@
                 <p>Intelligente Lernunterstützung mit KI-Personalisierung</p>
             </div>
             <div class="user-info">
+                <button class="dashboard-btn" onclick="window.location.href='/'">🏠 Dashboard</button>
                 <span id="usernameDisplay">Lade...</span>
                 <button class="school" onclick="window.location.href='/school-setup'">🏫 Schulkonfig</button>
                 <button class="logout" onclick="logout()">Logout</button>
             </div>
-            
+
             <div class="nav_bar">
-                <button onclick="window.location.href='/'" style="background: #007bff; margin-left: 10px;">
-                Dashboard
-                </button>
-                <button onclick="window.location.href='/static/planner.html'" style="background: #17a2b8; margin-left: 10px;">
-                    📅 Lernplaner
-                </button>
-                <button onclick="window.location.href='/static/grades.html'" style="background: #e0a800; margin-left: 10px;">
-                    📊 Noten
-                </button>
-                <button onclick="window.location.href='/materials'" style="background: #fd7e14; margin-left: 10px;">
-                    📄 Material
-                </button>
-                <button onclick="window.location.href='/test'" style="background: #28a745; margin-left: 10px;">
-                    🧪 Test-Modus
-                </button>
-                <button onclick="window.location.href='/chat'" style="background: #007bff; margin-left: 10px;">
-                💬 KI-Chat
-                </button>
-                <button onclick="window.location.href='/game'" style="background: #444; margin-left: 10px; cursor: default;">
-                🎮 Spielen
-                </button>
+                <button disabled>🃏 Karten</button>
+                
+                <button onclick="window.location.href='/planner'" style="background: #17a2b8;">📅 Planer</button>
+                <button onclick="window.location.href='/grades'" style="background: #e0a800;">📊 Noten</button>
+                <button onclick="window.location.href='/materials'" style="background: #fd7e14;">📄 Material</button>
+                <button onclick="window.location.href='/test'" style="background: #28a745;">🧪 Test</button>
+                <button onclick="window.location.href='/chat'" style="background: #007bff;">💬 Chat</button>
+                <button onclick="window.location.href='/game'" style="background: #6610f2;">🎮 Spielen</button>
             </div>
         </header>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;">
-            
-            <div id="setup" class="card">
-                <h2>✨ Neues Set generieren</h2>
-                <div class="form-group" style="flex-direction: column; align-items: stretch;">
-                    <input type="text" id="fcSubject" placeholder="Fach (z.B. Englisch)" value="Englisch">
-                    <input type="text" id="fcTopic" placeholder="Thema (z.B. Vokabeln Unit 1)" value="Business Terms">
-                    <button onclick="startFlashcards()" class="success" style="margin-top: 10px;">Karten erstellen 🪄</button>
-                </div>
+        <div id="setup" class="card">
+            <h2>✨ Neues Set generieren</h2>
+            <div class="form-group">
+                <input type="text" id="fcSubject" placeholder="Fach (z.B. Englisch)" value="Englisch">
+                <input type="text" id="fcTopic" placeholder="Thema (z.B. Vokabeln Unit 1)" value="Business Terms">
+                <button onclick="startFlashcards()" class="success">Karten erstellen 🪄</button>
             </div>
-
-            <div id="historyCard" class="card">
-                <h2>📂 Deine Sets</h2>
-                <div id="historyList" style="max-height: 300px; overflow-y: auto;">
-                    Lade Historie...
-                </div>
+            <div id="historyCard" style="margin-top: 20px;">
+                <h3>📂 Deine Sets</h3>
+                <div id="historyList">Lade Historie...</div>
             </div>
         </div>
 
         <div id="player" class="hidden">
-            <div class="flashcard-container" onclick="flipCard()">
-                <div class="flashcard" id="currentCard">
-                    <div class="card-face card-front">
-                        <div class="card-content" id="cardFrontText">Frage</div>
-                        <div class="card-hint">👆 Tippen zum Umdrehen</div>
-                    </div>
-                    <div class="card-face card-back">
-                        <div class="card-content" id="cardBackText">Antwort</div>
-                        <div class="card-hint">Rückseite</div>
+            <div class="card" style="text-align: center;">
+                <h3 id="topicDisplay" style="margin-bottom: 20px; color: #666;">Thema</h3>
+                
+                <div class="flashcard-container" onclick="flipCard()">
+                    <div class="flashcard" id="currentCard">
+                        <div class="card-face card-front">
+                            <div style="font-size: 0.9em; color: #888; margin-bottom: 10px;">FRAGE</div>
+                            <div id="cardFrontText" class="card-content">Frage...</div>
+                            <div class="card-hint">👆 Tippen zum Umdrehen</div>
+                        </div>
+                        <div class="card-face card-back">
+                            <div style="font-size: 0.9em; color: #888; margin-bottom: 10px;">ANTWORT</div>
+                            <div id="cardBackText" class="card-content">Antwort...</div>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="controls">
-                <button onclick="prevCard()" class="secondary">⬅️</button>
-                <div style="align-self:center; font-weight:bold; color:white; font-size: 1.2rem;" id="counter">1 / 5</div>
-                <button onclick="nextCard()" class="success">➡️</button>
-            </div>
-            
-            <div style="text-align: center; margin-top: 20px;">
-                <button onclick="location.reload()" class="secondary">🔙 Zurück zur Übersicht</button>
+                <div class="controls">
+                    <button onclick="prevCard()" class="secondary">⬅️</button>
+                    <div id="counter" style="align-self:center; font-weight:bold;">1 / 5</div>
+                    <button onclick="nextCard()" class="success">➡️</button>
+                </div>
+                <button onclick="location.reload()" class="secondary" style="margin-top: 20px;">Beenden</button>
             </div>
         </div>
+        
+        <div id="output" class="output" style="display: none;"></div>
+        <div id="debug" class="debug"></div>
     </div>
 
     <script src="/static/common.js"></script>

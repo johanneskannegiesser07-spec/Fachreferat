@@ -13,7 +13,12 @@ async function startFlashcards() {
     
     if(!subject || !topic) return alert("Bitte Fach & Thema eingeben!");
 
-    document.getElementById('setup').innerHTML = '<div style="text-align:center; padding:40px;"><div class="spinning" style="font-size:3rem">🪄</div><p>KI generiert & speichert Karten...</p></div>';
+    // Lade-Animation zeigen
+    document.getElementById('setup').innerHTML = `
+        <div style="text-align:center; padding:40px;">
+            <div style="font-size:3rem; animation: spin 2s linear infinite;">🪄</div>
+            <p>KI generiert & speichert Karten...</p>
+        </div>`;
 
     try {
         const result = await apiCall('/api/start-flashcards', 'POST', {
@@ -22,8 +27,12 @@ async function startFlashcards() {
 
         if(result.success) {
             initPlayer(result.data);
+        } else {
+            // Falls Fehler, Seite neu laden um Setup wiederherzustellen
+            location.reload(); 
         }
     } catch(e) {
+        console.error("Fehler beim Starten:", e);
         location.reload();
     }
 }
@@ -36,10 +45,13 @@ async function loadHistory() {
         const result = await apiCall('/api/flashcard-history');
         if(result.success && result.data.length > 0) {
             container.innerHTML = result.data.map(set => `
-                <div class="set-item" onclick="loadSet(${set.id})">
+                <div class="set-item" onclick="loadSet(${set.id})" 
+                     style="cursor:pointer; padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
                     <div>
                         <strong>${set.subject}</strong>: ${set.topic}
-                        <div style="font-size:0.8em; color:#666;">${set.card_count} Karten • ${new Date(set.date).toLocaleDateString()}</div>
+                        <div style="font-size:0.8em; color:#666;">
+                            ${set.card_count} Karten • ${new Date(set.date).toLocaleDateString()}
+                        </div>
                     </div>
                     <span>➡️</span>
                 </div>
@@ -48,7 +60,8 @@ async function loadHistory() {
             container.innerHTML = '<p style="color:#999; padding:10px;">Noch keine Sets gespeichert.</p>';
         }
     } catch(e) {
-        console.error(e);
+        console.error("History Error:", e);
+        container.innerHTML = '<p style="color:red;">Fehler beim Laden der Historie.</p>';
     }
 }
 
@@ -56,20 +69,32 @@ async function loadSet(setId) {
     try {
         const result = await apiCall(`/api/flashcards/${setId}`);
         if(result.success) {
-            // Setup ausblenden, Player starten
-            document.getElementById('setup').classList.add('hidden');
-            document.getElementById('historyCard').classList.add('hidden'); // Historie auch ausblenden
             initPlayer(result.data);
         }
-    } catch(e) { alert("Fehler beim Laden"); }
+    } catch(e) { 
+        console.error(e);
+        alert("Fehler beim Laden des Sets"); 
+    }
 }
 
 function initPlayer(data) {
+    if (!data.cards || data.cards.length === 0) {
+        alert("Dieses Set enthält keine Karten!");
+        return;
+    }
+
     cards = data.cards;
+    
+    // UI umschalten
     document.getElementById('setup').classList.add('hidden');
-    document.getElementById('historyCard')?.classList.add('hidden');
+    const historyCard = document.getElementById('historyCard');
+    if(historyCard) historyCard.classList.add('hidden');
+    
     document.getElementById('player').classList.remove('hidden');
-    document.getElementById('topicDisplay').textContent = `${data.subject} • ${data.topic}`;
+    
+    // Header Info setzen (falls Element existiert, sonst ignorieren)
+    const topicDisplay = document.getElementById('topicDisplay');
+    if (topicDisplay) topicDisplay.textContent = `${data.subject} • ${data.topic}`;
     
     currentIndex = 0;
     showCard(0);
@@ -77,13 +102,32 @@ function initPlayer(data) {
 
 function showCard(index) {
     const cardEl = document.getElementById('currentCard');
+    
+    // Erst zurückdrehen, falls gedreht
     cardEl.classList.remove('flipped');
 
+    // Kurze Verzögerung für Animation
     setTimeout(() => {
-        document.getElementById('cardFrontText').textContent = cards[index].front;
-        document.getElementById('cardBackText').textContent = cards[index].back;
+        const card = cards[index];
+        
+        // --- FIX: Daten-Normalisierung ---
+        // Wir prüfen, ob die Keys 'front'/'back' ODER 'question'/'answer' heißen
+        const textFront = card.front || card.question || "Fehler: Datenformat";
+        const textBack = card.back || card.answer || "Fehler: Datenformat";
+
+        document.getElementById('cardFrontText').textContent = textFront;
+        document.getElementById('cardBackText').textContent = textBack;
+        
         document.getElementById('counter').textContent = `${index + 1} / ${cards.length}`;
-        renderMath('currentCard');
+        
+        // --- FIX: Sicherer Render-Call ---
+        // Prüfen, ob common.js geladen wurde und renderMath existiert
+        if (typeof renderMath === 'function') {
+            renderMath('currentCard');
+        } else if (window.renderMathInElement) {
+             renderMathInElement(document.getElementById('currentCard'));
+        }
+        
     }, 150);
 }
 

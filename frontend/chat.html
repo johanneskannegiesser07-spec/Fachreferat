@@ -121,33 +121,20 @@
                 <p>Intelligente Lernunterstützung mit KI-Personalisierung</p>
             </div>
             <div class="user-info">
+                <button class="dashboard-btn" onclick="window.location.href='/'">🏠 Dashboard</button>
                 <span id="usernameDisplay">Lade...</span>
                 <button class="school" onclick="window.location.href='/school-setup'">🏫 Schulkonfig</button>
                 <button class="logout" onclick="logout()">Logout</button>
             </div>
-            
-            <div class="nav_bar">
-                <button onclick="window.location.href='/'" style="background: #007bff; margin-left: 10px;">
-                Dashboard
-                </button>
-                 <button onclick="window.location.href='/flashcards'" style="background: #6f42c1; margin-left: 10px;">
-                    🃏 Karteikarten
-                </button>
-                <button onclick="window.location.href='/static/planner.html'" style="background: #17a2b8; margin-left: 10px;">
-                    📅 Lernplaner
-                </button>
-                <button onclick="window.location.href='/static/grades.html'" style="background: #e0a800; margin-left: 10px;">
-                    📊 Noten
-                </button>
-                <button onclick="window.location.href='/materials'" style="background: #fd7e14; margin-left: 10px;">
-                    📄 Material
-                </button>
-                <button onclick="window.location.href='/test'" style="background: #28a745; margin-left: 10px;">
-                    🧪 Test-Modus
-                </button>
-                <button onclick="window.location.href='/game'" style="background: #444; margin-left: 10px; cursor: default;">
-                🎮 Spielen
-                </button>
+
+            <div class="nav_bar" style="float: right;">
+                <button onclick="window.location.href='/flashcards'">🃏 Karten</button>
+                <button onclick="window.location.href='/planner'" style="background: #17a2b8;">📅 Planer</button>
+                <button onclick="window.location.href='/grades'" style="background: #e0a800;">📊 Noten</button>
+                <button onclick="window.location.href='/materials'" style="background: #fd7e14;">📄 Material</button>
+                <button onclick="window.location.href='/test'" style="background: #28a745;">🧪 Test</button>
+                <button disabled onclick="window.location.href='/chat'" style="background: #007bff;">💬 Chat</button>
+                <button onclick="window.location.href='/game'" style="background: #6610f2;">🎮 Spielen</button>
             </div>
         </header>
 

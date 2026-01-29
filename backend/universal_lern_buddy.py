@@ -438,33 +438,44 @@ class UniversalLernBuddy:
 
     # === KARTEIKARTEN ===
 
+    # In backend/universal_lern_buddy.py
+
     def start_flashcard_session(self, username, subject, topic, count=10):
         user_hash = self.db.get_user_hash(username)
         
-        # --- NEU: Noten-Kontext bauen ---
-        grades = self.db.get_grades(user_hash) # Holt alle Noten
+        # --- Noten-Kontext bauen ---
+        grades = self.db.get_grades(user_hash)
         relevant_grade = "Keine Note bekannt"
-        
-        # Wir suchen die Note für das spezifische Fach (oder Durchschnitt)
         subj_grades = [float(g[2]) for g in grades if g[1].lower() == subject.lower()]
         if subj_grades:
             avg = sum(subj_grades) / len(subj_grades)
             relevant_grade = f"Durchschnittsnote in {subject}: {avg:.2f}"
         
-        print(f"🃏 Generiere Karteikarten für {subject} (Kontext: {relevant_grade})...")
+        print(f"🃏 Generiere Karteikarten für {subject}...")
         
-        # KI Generierung mit Context
+        # KI Generierung
         cards_data = self.ai.generate_flashcards(subject, topic, count, grades_context=relevant_grade)
         
-        if not cards_data or 'flashcards' not in cards_data:
-            cards_data = {
-                "flashcards": [{"front": "Fehler", "back": "Konnte keine Karten generieren."}]
-            }
+        # --- FIX: Daten normalisieren ---
+        # Egal was die KI liefert (question/answer), wir wandeln es in front/back um
+        clean_cards = []
+        raw_list = cards_data.get('flashcards', []) if cards_data else []
         
-        set_id = self.db.save_flashcard_set(user_hash, subject, topic, cards_data['flashcards'])
+        if not raw_list:
+             # Fallback
+             clean_cards = [{"front": "Fehler", "back": "KI konnte keine Karten generieren."}]
+        else:
+            for c in raw_list:
+                # Nimm 'front' ODER 'question', 'back' ODER 'answer'
+                f = c.get('front') or c.get('question') or "Frage fehlt"
+                b = c.get('back') or c.get('answer') or "Antwort fehlt"
+                clean_cards.append({"front": f, "back": b})
+
+        # Speichern
+        set_id = self.db.save_flashcard_set(user_hash, subject, topic, clean_cards)
             
         return {
-            "set_id": set_id, "subject": subject, "topic": topic, "cards": cards_data['flashcards']
+            "set_id": set_id, "subject": subject, "topic": topic, "cards": clean_cards
         }
 
     def get_flashcard_history(self, username):

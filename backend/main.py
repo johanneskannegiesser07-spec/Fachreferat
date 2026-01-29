@@ -155,6 +155,16 @@ async def serve_school_setup():
     """🏫 Serve Schulkonfigurations-Seite"""
     return FileResponse("../frontend/school-setup.html")
 
+@app.get("/planner")
+async def serve_planner():
+    """📅 Serve Lernplan-Seite"""
+    return FileResponse("../frontend/planner.html")
+
+@app.get("/grades")
+async def serve_grades():
+    """📊 Serve Noten-Seite"""
+    return FileResponse("../frontend/grades.html")
+
 # Static Files
 app.mount("/static", StaticFiles(directory="../frontend"), name="static")
 
