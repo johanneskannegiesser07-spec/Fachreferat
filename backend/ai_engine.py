@@ -44,7 +44,7 @@ class AIEngine:
 
         print(f"🤖 KI-Engine geladen: {self.model} via {self.mode.upper()}")
 
-    def _robust_api_call(self, prompt, max_retries=2, response_format="text", timeout=60):
+    def _robust_api_call(self, prompt, max_retries=2, response_format="text", timeout=60, system_prompt=None):
         """Robust Request mit System-Prompt und aggressivem JSON-Fixing"""
         
         if not self.api_key and self.mode == "cloud":
@@ -53,16 +53,22 @@ class AIEngine:
             
         headers = { "Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json" }
         
-        # 1. SYSTEM PROMPT: Macht das Modell "gehorsam"
+        # System Prompt Logik
+        default_system = "You are a helpful AI assistant."
+        if response_format == "json":
+            default_system = "You are a strict JSON generator. Output ONLY valid JSON. No markdown, no intro text."
+            
+        final_system = system_prompt if system_prompt else default_system
+        
         messages = [
-            {"role": "system", "content": "You are a strict JSON generator. Output ONLY valid JSON. No markdown, no intro text, no explanations."},
+            {"role": "system", "content": final_system},
             {"role": "user", "content": prompt}
         ]
 
         data = {
             "model": self.model,
             "messages": messages,
-            "temperature": 0.5 # Etwas kreativer als 0, aber strikter als 0.7
+            "temperature": 0.5
         }
 
         if response_format == "json":
@@ -403,7 +409,7 @@ class AIEngine:
         try:
             # Hier nutzen wir deine bestehende call_llm Funktion
             # (Passe den Modell-Namen an, falls du 'llama3.1' oder 'openrouter' nutzt)
-            response = self.call_llm(prompt, system_prompt="Du bist ein Experte für interdisziplinäres Wissen.")
+            response = self._robust_api_call(prompt, system_prompt="Du bist ein Experte für interdisziplinäres Wissen.")
             
             # JSON Parsing
             clean_json = response.strip()

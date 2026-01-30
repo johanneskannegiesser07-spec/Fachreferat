@@ -342,11 +342,11 @@ async def get_profile(current_user: dict = Depends(get_current_user)):
 @app.post("/api/start-test")
 async def start_test_session(
     test_request: TestRequest,
+    background_tasks: BackgroundTasks, # <--- HIER: Background Tasks injizieren
     current_user: dict = Depends(get_current_user)
 ):
-    """🧪 Startet eine neue Test-Session"""
-    if not buddy:
-        raise HTTPException(status_code=500, detail="Lern-Buddy nicht geladen")
+    """🧪 Startet Test & sucht im Hintergrund nach Wissens-Verbindungen"""
+    if not buddy: raise HTTPException(status_code=500)
     
     try:
         test_session = buddy.start_test_session(
@@ -355,6 +355,16 @@ async def start_test_session(
             test_request.topic,
             test_request.question_count
         )
+        
+        # HINTERGRUND-TASK STARTEN: Verbindungen suchen
+        # Das blockiert die Antwort an den User NICHT!
+        background_tasks.add_task(
+            buddy.check_and_generate_connections,
+            current_user['sub'],
+            test_request.subject,
+            test_request.topic
+        )
+        
         return {
             "success": True,
             "data": test_session,
@@ -599,14 +609,21 @@ class FlashcardRequest(BaseModel):
 @app.post("/api/start-flashcards")
 async def start_flashcards(
     request: FlashcardRequest,
+    background_tasks: BackgroundTasks, # <--- AUCH HIER: Graph im Hintergrund updaten
     current_user: dict = Depends(get_current_user)
 ):
-    """🃏 Startet eine neue Karteikarten-Session"""
-    if not buddy: raise HTTPException(status_code=500, detail="Buddy fehlt")
+    if not buddy: raise HTTPException(status_code=500)
     
-    data = buddy.start_flashcard_session(
-        current_user['sub'], request.subject, request.topic, request.count
+    data = buddy.start_flashcard_session(current_user['sub'], request.subject, request.topic, request.count)
+    
+    # Background Task für Verbindungen
+    background_tasks.add_task(
+        buddy.check_and_generate_connections,
+        current_user['sub'],
+        request.subject,
+        request.topic
     )
+    
     return {"success": True, "data": data}
 
 
