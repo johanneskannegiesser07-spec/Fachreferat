@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>KI Quiz Generator</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 400px; text-align: center; }
+        input { width: 80%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 6px; }
+        button { background: #4facfe; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 16px; width: 100%; transition: 0.3s;}
+        button:hover { background: #00f2fe; }
+        .option-btn { background: #e9ecef; color: #333; margin: 5px 0; border: 2px solid transparent; }
+        .option-btn:hover { background: #dee2e6; }
+        .correct { background: #d4edda !important; border-color: #28a745 !important; }
+        .wrong { background: #f8d7da !important; border-color: #dc3545 !important; }
+        #quiz-container { display: none; margin-top: 20px; }
+        #erklaerung { margin-top: 15px; font-style: italic; color: #555; display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>🧠 KI Quiz Buddy</h2>
+        <input type="text" id="thema" placeholder="Worüber möchtest du geprüft werden? (z.B. Python)">
+        <button onclick="generiereQuiz()" id="loadBtn">Quiz Generieren</button>
+
+        <div id="quiz-container">
+            <h3 id="frage-text">Lade Frage...</h3>
+            <div id="antworten-box"></div>
+            <p id="erklaerung"></p>
+        </div>
+    </div>
+
+    <script>
+        let aktuellesQuiz = null;
+
+        async function generiereQuiz() {
+            const thema = document.getElementById('thema').value;
+            if(!thema) return alert("Bitte ein Thema eingeben!");
+
+            document.getElementById('loadBtn').innerText = "KI denkt nach... 🤖";
+            document.getElementById('quiz-container').style.display = 'none';
+            document.getElementById('erklaerung').style.display = 'none';
+
+            // Anfrage ans Backend senden (Das Routing aus These 1!)
+            const response = await fetch('http://127.0.0.1:8000/api/generate-quiz', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ thema: thema })
+            });
+
+            aktuellesQuiz = await response.json();
+            
+            // UI aktualisieren
+            document.getElementById('frage-text').innerText = aktuellesQuiz.frage;
+            const antwortenBox = document.getElementById('antworten-box');
+            antwortenBox.innerHTML = ''; // Alte Antworten löschen
+
+            // Buttons für Antworten erstellen
+            aktuellesQuiz.antworten.forEach((antwort, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerText = antwort;
+                btn.onclick = () => pruefeAntwort(index, btn);
+                antwortenBox.appendChild(btn);
+            });
+
+            document.getElementById('quiz-container').style.display = 'block';
+            document.getElementById('loadBtn').innerText = "Neues Quiz Generieren";
+        }
+
+        function pruefeAntwort(gewaehlterIndex, btnElement) {
+            const alleButtons = document.querySelectorAll('.option-btn');
+            // Buttons deaktivieren nach Klick
+            alleButtons.forEach(b => b.disabled = true); 
+
+            if (gewaehlterIndex === aktuellesQuiz.korrekter_index) {
+                btnElement.classList.add('correct');
+            } else {
+                btnElement.classList.add('wrong');
+                // Richtige Antwort trotzdem grün markieren
+                alleButtons[aktuellesQuiz.korrekter_index].classList.add('correct');
+            }
+
+            const erklaerung = document.getElementById('erklaerung');
+            erklaerung.innerText = aktuellesQuiz.erklaerung;
+            erklaerung.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

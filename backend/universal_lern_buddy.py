@@ -634,37 +634,120 @@ class UniversalLernBuddy:
         print(f"✅ Verbindungen gespeichert.")
 
     # Update für die Graph-Daten Methode
+    # In backend/universal_lern_buddy.py
+
     def get_knowledge_graph_data(self, username):
+        """Generiert Nodes und Edges basierend auf Tests UND Karteikarten"""
         user_hash = self.db.get_user_hash(username)
-        stats = self.db.get_topic_performance(user_hash)
         
+        # 1. Alle Themen holen (Tests + Flashcards kombiniert)
+        # HINWEIS: Diese Methode muss in database.py existieren!
+        try:
+            all_stats = self.db.get_all_topics_stats(user_hash)
+        except AttributeError:
+            # Fallback, falls du database.py noch nicht geupdated hast
+            print("⚠️ Warnung: get_all_topics_stats fehlt in DB. Nutze alte Methode.")
+            raw_stats = self.db.get_topic_performance(user_hash)
+            all_stats = {}
+            for row in raw_stats:
+                all_stats[(row[0], row[1])] = {'avg_score': row[2], 'test_count': row[3], 'card_sets': 0}
+
         nodes = []
         edges = []
         
-        # ... (Dein existierender Code für Nodes & Standard-Edges) ...
-        # ... (Nodes erstellen wie vorher: Root, Fächer, Themen) ...
-        # (Kopiere hier deinen bisherigen Node-Generierungscode rein oder lass ihn stehen)
+        # 1. ROOT NODE (Das Zentrum)
+        nodes.append({
+            "id": "root", 
+            "label": "🧠 Mein Wissen", 
+            "color": "#ffffff", 
+            "shape": "diamond", 
+            "size": 40,
+            "font": {"size": 20, "color": "#ffffff"} # Schwarzer Text für Lesbarkeit auf Weiß
+        })
         
-        # --- HIER EINFÜGEN: Querverbindungen laden ---
-        cross_links = self.db.get_topic_connections(user_hash)
+        subjects_map = {} # Cache, damit wir Fächer-Nodes nicht doppelt erstellen
         
-        for link in cross_links:
-            s_sub, s_top, t_sub, t_top, reason = link
+        # 2. Iteriere durch alle gefundenen Themen
+        for (subject, topic), data in all_stats.items():
+            avg_score = data.get('avg_score')
+            count = data.get('test_count', 0)
+            card_sets = data.get('card_sets', 0)
             
-            if t_sub == "NONE": continue # Platzhalter überspringen
+            # --- FACH NODE (Level 1) ---
+            if subject not in subjects_map:
+                subj_id = f"subj_{subject}"
+                nodes.append({
+                    "id": subj_id,
+                    "label": subject,
+                    "color": "#4facfe",  # Schönes Hellblau
+                    "shape": "dot",
+                    "size": 30,
+                    "font": {"size": 16, "color": "#ffffff"}
+                })
+                # Verbindung zum Gehirn
+                edges.append({"from": "root", "to": subj_id, "length": 150})
+                subjects_map[subject] = True
             
-            # IDs rekonstruieren
-            source_id = f"topic_{s_sub}_{s_top}"
-            target_id = f"topic_{t_sub}_{t_top}"
+            # --- THEMA NODE (Level 2) ---
+            # Farbe & Text bestimmen
+            if avg_score is None:
+                # Fall A: Nur Karteikarten, kein Test gemacht
+                color = "#bdc3c7" # Grau/Silber
+                label_text = f"{topic}\n(Lerne...)"
+                # Größe basiert auf Anzahl der Sets
+                size = 10 + (card_sets * 3) 
+            else:
+                # Fall B: Test gemacht -> Farbe nach Note
+                if avg_score >= 80:
+                    color = "#28a745" # Grün (Super!)
+                elif avg_score >= 50:
+                    color = "#ffc107" # Gelb (Okay)
+                else:
+                    color = "#dc3545" # Rot (Lernbedarf!)
+                
+                label_text = f"{topic}\n{int(avg_score)}%"
+                # Größe basiert auf Anzahl der Tests
+                size = 15 + (count * 1.5)
+
+            topic_id = f"topic_{subject}_{topic}"
             
-            # Edge hinzufügen (Gestrichelt & andere Farbe für Querverbindungen)
-            edges.append({
-                "from": source_id,
-                "to": target_id,
-                "color": {"color": "#ff9f43", "opacity": 0.6}, # Orange
-                "dashes": True,
-                "title": f"🔗 {reason}", # Tooltip zeigt den Grund!
-                "width": 1
+            nodes.append({
+                "id": topic_id,
+                "label": label_text,
+                "color": color,
+                "shape": "dot",
+                "size": size,
+                "font": {"size": 14, "color": "#ffffff"}
             })
+            
+            # Verbindung Fach -> Thema
+            edges.append({"from": f"subj_{subject}", "to": topic_id})
+
+        # 3. Querverbindungen (Cross-Links) laden
+        try:
+            cross_links = self.db.get_topic_connections(user_hash)
+            
+            for link in cross_links:
+                s_sub, s_top, t_sub, t_top, reason = link
+                
+                if t_sub == "NONE": continue 
+                
+                # IDs rekonstruieren
+                source_id = f"topic_{s_sub}_{s_top}"
+                target_id = f"topic_{t_sub}_{t_top}"
+                
+                # Check ob beide Nodes existieren (wichtig!)
+                node_ids = [n["id"] for n in nodes]
+                if source_id in node_ids and target_id in node_ids:
+                    edges.append({
+                        "from": source_id,
+                        "to": target_id,
+                        "color": {"color": "#ff9f43", "opacity": 0.6}, # Orange
+                        "dashes": True,
+                        "title": f"🔗 {reason}", # Tooltip zeigt den Grund!
+                        "width": 1
+                    })
+        except Exception as e:
+            print(f"Graph Error (Connections): {e}")
             
         return {"nodes": nodes, "edges": edges}

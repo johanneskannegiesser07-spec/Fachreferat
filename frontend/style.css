@@ -343,3 +343,37 @@ button.school { background: #17a2b8; }
 .dashboard-btn:hover {
     background-color: #5a6268;
 }
+
+
+/* --- Gamification Stats im Header --- */
+.stats-container {
+    display: flex;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 5px 10px;
+    border-radius: 20px;
+    margin-right: 15px;
+}
+
+.stat-badge {
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-weight: bold;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.gems-badge {
+    background: #2b5876; /* Dunkelblau */
+    color: #00d2ff;      /* Cyan Text */
+    border: 1px solid #4facfe;
+}
+
+.xp-badge {
+    background: #f09819; /* Orange/Gold */
+    color: #fff;
+    border: 1px solid #ffe259;
+}

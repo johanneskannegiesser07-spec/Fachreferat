@@ -30,9 +30,16 @@
                 <p>Intelligente Lernunterstützung mit KI-Personalisierung</p>
             </div>
             <div class="user-info">
+                <div class="stats-container">
+                    <div class="stat-badge gems-badge" title="Gems">
+                        💎 <span id="headerGems">0</span>
+                    </div>
+                    <div class="stat-badge xp-badge" title="XP">
+                        ✨ <span id="headerXP">0</span> XP
+                    </div>
+                </div>
                 <button class="dashboard-btn" onclick="window.location.href='/'">🏠 Dashboard</button>
                 <span id="usernameDisplay">Lade...</span>
-                <button class="school" onclick="window.location.href='/school-setup'">🏫 Schulkonfig</button>
                 <button class="logout" onclick="logout()">Logout</button>
             </div>
 
@@ -84,6 +91,7 @@
                     <div id="counter" style="align-self:center; font-weight:bold;">1 / 5</div>
                     <button onclick="nextCard()" class="success">➡️</button>
                 </div>
+                <button onclick="deleteCard()" class="secondary" style="margin-top: 20px; background-color: red;">Löschen 🗑️</button>
                 <button onclick="location.reload()" class="secondary" style="margin-top: 20px;">Beenden</button>
             </div>
         </div>

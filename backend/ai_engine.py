@@ -21,7 +21,7 @@ class AIEngine:
         self.mode = os.getenv("AI_PROVIDER", "cloud").lower()
         
         if self.mode == "local":
-            # === LOKALER MODUS (Dein Monster-PC) ===
+            # === LOKALER MODUS ===
             print(f"🏠 Nutze lokalen Heim-Server (Ollama)")
             
             # IP deines PCs im VPN (aus .env laden oder Fallback)
@@ -40,7 +40,7 @@ class AIEngine:
             print("☁️ Nutze OpenRouter Cloud")
             self.api_key = os.getenv("OPENROUTER_API_KEY")
             self.base_url = "https://openrouter.ai/api/v1/chat/completions"
-            self.model = "tngtech/deepseek-r1t2-chimera:free"
+            self.model = "openrouter/free"
 
         print(f"🤖 KI-Engine geladen: {self.model} via {self.mode.upper()}")
 
@@ -407,8 +407,6 @@ class AIEngine:
         """
         
         try:
-            # Hier nutzen wir deine bestehende call_llm Funktion
-            # (Passe den Modell-Namen an, falls du 'llama3.1' oder 'openrouter' nutzt)
             response = self._robust_api_call(prompt, system_prompt="Du bist ein Experte für interdisziplinäres Wissen.")
             
             # JSON Parsing

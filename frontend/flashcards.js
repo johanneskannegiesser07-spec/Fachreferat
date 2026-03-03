@@ -53,6 +53,7 @@ async function loadHistory() {
                             ${set.card_count} Karten • ${new Date(set.date).toLocaleDateString()}
                         </div>
                     </div>
+                    <span onclick="deleteCard(${set.id})">🗑️</span>
                     <span>➡️</span>
                 </div>
             `).join('');
@@ -146,5 +147,19 @@ function prevCard() {
     if(currentIndex > 0) {
         currentIndex--;
         showCard(currentIndex);
+    }
+}
+
+async function deleteCard(id) {
+    if (!confirm("Möchtest du diese Karteikarte wirklich löschen?")) return;
+
+    try {
+        const res = await apiCall(`/api/cards/${id}`, 'DELETE');
+        if (res.success) {
+            showOutput("Note gelöscht.", "success-msg");
+            loadGrades();
+        }
+    } catch (e) {
+        showOutput("Fehler beim Löschen.", "error-msg");
     }
 }

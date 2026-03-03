@@ -11,18 +11,38 @@ async function checkAuthentication(redirectIfMissing = true) {
     }
 
     try {
-        // Wir prüfen nur lokal auf Token-Existenz um Ladezeiten zu sparen,
-        // echte Prüfung passiert beim ersten API Call.
-        // Optional: /api/check-auth aufrufen
-        const userStr = localStorage.getItem('user');
-        if (userStr) {
-            const user = JSON.parse(userStr);
-            updateUserDisplay(user.username);
+        // WICHTIG: Wir fragen jetzt immer den Server nach frischen Daten!
+        const response = await fetch(`${API_BASE}/api/check-auth`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            const user = result.user;
+            
+            // 1. Username anzeigen
+            updateUserDisplay(user.sub || user.username);
+            
+            // 2. NEU: XP und Gems im Header aktualisieren
+            const gemDisplay = document.getElementById('headerGems');
+            const xpDisplay = document.getElementById('headerXP');
+            
+            // Wir prüfen, ob die Elemente da sind (damit es auf Login-Seite keinen Fehler gibt)
+            if (gemDisplay) gemDisplay.textContent = user.gems || 0;
+            if (xpDisplay) xpDisplay.textContent = user.xp || 0;
+
+            // 3. User im Storage updaten
+            localStorage.setItem('user', JSON.stringify(user));
             return user;
+        } else {
+            // Token abgelaufen -> Logout
+            logout();
         }
     } catch (e) {
         console.error("Auth Fehler:", e);
-        logout();
+        // Fallback: Wenn Server offline, zeige alte Daten aus Storage
+        const userStr = localStorage.getItem('user');
+        if (userStr) return JSON.parse(userStr);
     }
 }
 

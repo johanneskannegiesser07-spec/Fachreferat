@@ -233,11 +233,21 @@ async def login_user(user_data: UserLogin):
 
 @app.get("/api/check-auth")
 async def check_auth(current_user: dict = Depends(get_current_user)):
-    """🔒 Prüft ob User authentifiziert ist"""
+    """🔒 Prüft ob User authentifiziert ist UND holt frische XP/Gems"""
+    if not buddy:
+        raise HTTPException(status_code=500, detail="Buddy fehlt")
+        
+    # 1. Frische Stats aus der DB holen (Wichtig!)
+    stats = buddy.get_user_stats(current_user['sub'])
+    
+    # 2. Stats in das User-Objekt mischen
+    user_data = current_user.copy()
+    user_data.update(stats) # Fügt 'xp' und 'gems' hinzu
+    
     return {
         "success": True,
         "authenticated": True,
-        "user": current_user
+        "user": user_data
     }
 
 # === SCHULKONTEXT ENDPOINTS ===
@@ -906,8 +916,10 @@ async def websocket_endpoint(websocket: WebSocket):
                 # 30 FPS Takt im laufenden Spiel
                 await asyncio.sleep(0.033)
             
+    except WebSocketDisconnect:
+        print(f"🔌 Verbindung getrennt von {user_username} (Code 1001 - Refresh/Close)")
     except Exception as e:
-        print(f"Game Loop Error: {e}")
+        print(f"❌ Echter Game Loop Error: {e}")
         try: await websocket.close()
         except: pass
 
@@ -916,6 +928,14 @@ async def get_user_stats(current_user: dict = Depends(get_current_user)):
     if not buddy: raise HTTPException(status_code=500)
     stats = buddy.get_user_stats(current_user['sub'])
     return {"success": True, "data": stats}
+
+@app.delete("/api/cards/{grade_id}")
+async def delete_grade(grade_id: int, current_user: dict = Depends(get_current_user)):
+    """🗑️ Löscht eine Note"""
+    if not buddy: raise HTTPException(status_code=500)
+    
+    success = buddy.delete_grade(current_user['sub'], grade_id)
+    return {"success": success}
 
 
 

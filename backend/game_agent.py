@@ -20,7 +20,7 @@ class GameSession:
             "y": 300,
             "vx": 0,
             "vy": 0,
-            "angle": 0,
+            "angle": 20,
             "width": 20,
             "height": 30,
             "dead": False

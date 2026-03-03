@@ -418,20 +418,50 @@ class DatabaseManager:
         finally:
             conn.close()
 
-    def get_topic_performance(self, user_hash):
+    # In backend/database.py
+
+    def get_all_topics_stats(self, user_hash):
         """
-        Holt aggregierte Performance-Daten für den Wissensgraphen.
-        Gruppiert nach Fach -> Thema.
-        Rückgabe: [(Subject, Topic, AvgScore, Count), ...]
+        Holt ALLE Themen (aus Tests UND Flashcards) und deren Status.
+        Rückgabe: Dictionary {(Subject, Topic): {'avg_score': float, 'test_count': int, 'card_sets': int}}
         """
         conn = self.get_connection()
         try:
-            return conn.execute('''
-                SELECT subject, topic, AVG(score) as avg_score, COUNT(*) as num_tests
+            stats = {}
+
+            # 1. Daten aus Tests holen
+            tests = conn.execute('''
+                SELECT subject, topic, AVG(score), COUNT(*)
                 FROM test_sessions 
                 WHERE user_hash = ? AND status = 'completed'
                 GROUP BY subject, topic
             ''', (user_hash,)).fetchall()
+
+            for t in tests:
+                key = (t[0], t[1]) # (Fach, Thema)
+                stats[key] = {
+                    'avg_score': t[2],
+                    'test_count': t[3],
+                    'card_sets': 0
+                }
+
+            # 2. Daten aus Flashcards dazumischen
+            cards = conn.execute('''
+                SELECT subject, topic, COUNT(*)
+                FROM flashcard_sets 
+                WHERE user_hash = ?
+                GROUP BY subject, topic
+            ''', (user_hash,)).fetchall()
+
+            for c in cards:
+                key = (c[0], c[1])
+                if key not in stats:
+                    # Thema existiert nur als Karteikarten -> Score ist None
+                    stats[key] = {'avg_score': None, 'test_count': 0, 'card_sets': c[2]}
+                else:
+                    stats[key]['card_sets'] = c[2]
+            
+            return stats
         finally:
             conn.close()
 
