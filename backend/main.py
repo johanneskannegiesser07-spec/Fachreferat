@@ -929,14 +929,6 @@ async def get_user_stats(current_user: dict = Depends(get_current_user)):
     stats = buddy.get_user_stats(current_user['sub'])
     return {"success": True, "data": stats}
 
-@app.delete("/api/cards/{grade_id}")
-async def delete_grade(grade_id: int, current_user: dict = Depends(get_current_user)):
-    """🗑️ Löscht eine Note"""
-    if not buddy: raise HTTPException(status_code=500)
-    
-    success = buddy.delete_grade(current_user['sub'], grade_id)
-    return {"success": success}
-
 
 
 # === START-SKRIPT ===

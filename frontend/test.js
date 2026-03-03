@@ -263,7 +263,6 @@ function renderResults(data) {
             </div>
 
             <div class="feedback-section" style="margin-bottom: 40px; background: #f8faff; border-radius: 16px; padding: 5px; border: 1px solid #e2e8f0;">
-                <h3 style="margin: 20px 0 15px 25px; color: #5a67d8;">🚀 Coach-Feedback</h3>
                 <div class="feedback-container">
                     ${renderAiFeedback(data.comprehensive_feedback)}
                 </div>

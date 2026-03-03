@@ -1,50 +1,48 @@
 # 🤖 KI-Lern-Buddy & Gravity Defender
 ### Fachreferat FOS 12 – Eine adaptive Lernplattform mit integrierter Gamification und hybrider KI-Engine
 
-![Python](https://img.shields.io/badge/Python-3.10%252B-blue)
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-Modern-green)
-![AI-Hybrid](https://img.shields.io/badge/AI-Hybrid%2520(Cloud%252FLocal)-purple)
-![Game](https://img.shields.io/badge/Game-Gravity%2520Defender-orange)
-![License](https://img.shields.io/badge/License-MIT-yellow)
+![AI-Hybrid](https://img.shields.io/badge/AI-Hybrid%20(Cloud%2FLocal)-purple)
+![Game](https://img.shields.io/badge/Game-Gravity%20Defender-orange)
 
 ## 📋 Projektbeschreibung
+Dieses Projekt entstand im Rahmen des Fachreferats der 12. Klasse (FOSBOSNES) im Fach Informatik/Technologie. 
 
-Der **KI-Lern-Buddy** ist mehr als nur ein Vokabeltrainer. Es ist ein intelligentes Ökosystem, das Schülerinnen und Schülern hilft, effizienter zu lernen, indem es Lerninhalte personalisiert und Erfolge spielerisch belohnt.
+Der **KI-Lern-Buddy** ist ein intelligentes Ökosystem, das demonstriert, wie moderne Softwarearchitektur (strikte Trennung von Frontend und Backend) mit externen KI-Schnittstellen orchestriert wird. Das System analysiert Noten, generiert personalisierte Lerninhalte und belohnt Erfolge spielerisch.
 
-Das System verbindet drei Kernkomponenten:
-
-1.  **Lern-Engine:** Analysiert Noten & Uploads (PDFs), um maßgeschneiderte Übungen zu erstellen.
-2.  **Hybrid AI Engine:** Nutzt Cloud-LLMs (OpenRouter) oder lokale Modelle (Ollama) für maximalen Datenschutz & Flexibilität.
-3.  **Gamification (Gravity Defender):** Ein integriertes Arcade-Spiel, das mit "Gems" (durch Lernen verdient) freigeschaltet wird.
+### Die drei Kernkomponenten:
+1. **Lern-Engine:** Analysiert historische Noten & PDF-Uploads, um maßgeschneiderte Multiple-Choice-Tests und Karteikarten zu generieren.
+2. **Hybrid AI Engine:** Eine abstrakte Schnittstelle, die dynamisch zwischen Cloud-LLMs (OpenRouter/Deepseek) und lokalen Modellen (Ollama) wechseln kann, um Datenschutz und Kosteneffizienz zu gewährleisten.
+3. **Gamification (Gravity Defender):** Ein vollständig über WebSockets angebundenes Echtzeit-Spiel, bei dem die physikalische Logik im Backend und das Rendering im Frontend (HTML5 Canvas) stattfindet.
 
 ---
 
-## ✨ Haupt-Features
+## ✨ System-Architektur & Features
 
 ### 🧠 Intelligentes Lernen
-* **Adaptives Test-System:** Generiert Fragen dynamisch basierend auf dem aktuellen Wissensstand des Nutzers.
-* **PDF-Analyse (RAG):** Schüler können Hefteinträge hochladen; die KI erstellt daraus Zusammenfassungen und prüfungsrelevante Fragen.
-* **KI-Coach:** Gibt motivierendes, inhaltliches Feedback anstatt nur "Falsch/Richtig".
-* **Wissens-Graph:** Visualisierung der verknüpften Fächer und Kompetenzen zur Identifikation von Lücken.
+* **Adaptives Test-System:** Generiert Fragen dynamisch auf Basis des aktuellen Wissensstands und liefert ein detailliertes "Coach-Feedback" (JSON-strukturiert).
+* **RAG-Ansatz (Retrieval-Augmented Generation):** Schüler laden Lernmaterialien hoch; die KI liest diese aus und erstellt daraus direkt Prüfungsfragen.
+* **Wissens-Graph:** Eine visuelle Darstellung (via vis.js) der verknüpften Fächer und Kompetenzen zur Identifikation von Wissenslücken.
 
-### 🎮 Gamification
-* **Währungssystem:** Löse Aufgaben → Erhalte **Gems 💎** und **XP ✨**.
-* **Gravity Defender:** Ein WebSocket-basiertes Echtzeit-Spiel direkt im Browser.
-    * *Mechanik:* Steuere eine Rakete, weiche Aliens aus und lande sicher.
-    * *Belohnung:* Siege im Spiel bringen massive XP-Boni für das Lernprofil.
-* **Profil-System:** Zeige deine Erfolge, gesammelte Gems und Spiel-Highscores.
+### 🎮 Gamification & Belohnung
+* **Währungssystem:** Für das Abschließen von Tests erhalten Nutzer **Gems 💎** und **XP ✨**.
+* **Gravity Defender:** Ein 2D Arcade-Spiel im Browser.
+    * *Backend:* Python berechnet Kollisionslogik und Schwerkraft (60 Ticks/Sekunde).
+    * *Frontend:* Empfängt reine Koordinaten und zeichnet Vektoren.
+* **Dashboard:** Visualisiert den Lernfortschritt, Highscores und Gamification-Stats.
 
 ---
 
 ## 🛠️ Technologie-Stack
 
-| Bereich | Technologie | Details |
+| Schicht | Technologie | Einsatzzweck |
 | :--- | :--- | :--- |
-| **Backend** | Python, FastAPI | Asynchrone API, WebSockets für das Echtzeit-Spiel |
+| **Backend** | Python, FastAPI | Asynchrone REST-API, WebSocket-Server, Datenfluss-Steuerung |
 | **Datenbank** | SQLite | Speichert User, Noten, Lernfortschritt (WAL-Mode aktiv) |
-| **Frontend** | HTML5, CSS3, JS | Vanilla JS (kein Framework-Overhead), Canvas API für das Rendering |
-| **KI / AI** | Hybrid Engine | Support für OpenRouter (Cloud) & Ollama (Local/VPN) |
-| **Security** | OAuth2 / JWT | Sichere Authentifizierung & Password Hashing |
+| **Frontend** | HTML5, CSS3, Vanilla JS | Rendering ohne Framework-Overhead, Canvas API, Chart.js |
+| **KI / AI** | Hybrid Engine API | Support für OpenRouter (Cloud) & Ollama (Local/VPN) |
+| **Security** | OAuth2 / JWT | Sichere Authentifizierung, Password Hashing |
 
 ---
 
@@ -52,72 +50,39 @@ Das System verbindet drei Kernkomponenten:
 
 ### Voraussetzungen
 * Python 3.10 oder höher
-* (Optional) [Ollama](https://ollama.com/) für lokalen KI-Betrieb ohne Internetkosten
+* (Optional) [Ollama](https://ollama.com/) für lokalen, offline KI-Betrieb
 
-### Schritt 1: Repository klonen
+### 1. Repository klonen & Abhängigkeiten installieren
 ```bash
-git clone [https://github.com/DeinUser/fachreferat.git](https://github.com/DeinUser/fachreferat.git)
+git clone https://github.com/JohannesK07/fachreferat.git
 cd fachreferat
-```
-
-### Schritt 2: Abhängigkeiten installieren
-```bash
 pip install -r backend/requirements.txt
 ```
 
-### Schritt 3: Konfiguration (.env)
-Erstelle eine `.env` Datei im Ordner `backend/`. Kopiere folgenden Inhalt hinein und passe ihn an:
+### 2. Konfiguration (.env)
+Erstelle eine `.env` Datei im Ordner `backend/`. Kopiere folgenden Inhalt hinein und passe deinen API-Key an:
 
 ```env
-# Modus: "cloud" oder "local"
+# KI Provider: "cloud" oder "local"
 AI_PROVIDER=cloud
-
-# Falls Cloud (OpenRouter):
 OPENROUTER_API_KEY=dein_api_key_hier
 
-# Falls Local (Ollama):
+# Falls Local (Ollama) genutzt wird:
 OLLAMA_IP=127.0.0.1
 OLLAMA_MODEL=llama3.1
 
 # Security
-SECRET_KEY=super_geheimer_key_fuer_jwt
+SECRET_KEY=dein_geheimer_jwt_key
 ```
 
-### Schritt 4: Starten
-Führe das Startskript aus dem Hauptverzeichnis aus:
-
+### 3. Server starten
 ```bash
 python backend/main.py
 ```
-
-### Zugriff
-* **Web-Interface:** `http://localhost:8000`
-* **API-Dokumentation (Swagger UI):** `http://localhost:8000/docs`
-
----
-
-## 📂 Projektstruktur
-
-```text
-/
-├── backend/
-│   ├── main.py                 # Zentraler Einstiegspunkt, API-Routen & WebSocket-Manager
-│   ├── ai_engine.py            # Wrapper für KI-Kommunikation (Cloud & Lokal)
-│   ├── game_agent.py           # Physik-Engine & Logik für "Gravity Defender"
-│   ├── universal_lern_buddy.py # Controller/Business-Logik
-│   ├── database.py             # SQL-Datenbank-Manager
-│   └── requirements.txt        # Python-Abhängigkeiten
-├── frontend/
-│   ├── game.js                 # Rendering-Engine (Canvas) für das Spiel
-│   ├── dashboard.js            # Logik für Graphen und Statistiken
-│   ├── style.css               # Styling der Webseite
-│   ├── index.html              # Hauptseite
-│   └── game.html               # Spielseite
-└── README.md                   # Diese Datei
-```
+* **Web-Interface:** [http://localhost:8000](http://localhost:8000)
+* **API-Dokumentation (Swagger UI):** [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ---
 
 ## 👨‍💻 Autor
-
-Entwickelt von **[Dein Name]** für das Fachreferat Klasse 12.
+Entwickelt von **Johannes Kannegießer** (Klasse 12 STC) für das Fachreferat im Schuljahr 2025/26 an der Fach- und Berufsoberschule Bad Neustadt.

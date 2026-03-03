@@ -46,15 +46,17 @@ async function loadHistory() {
         if(result.success && result.data.length > 0) {
             container.innerHTML = result.data.map(set => `
                 <div class="set-item" onclick="loadSet(${set.id})" 
-                     style="cursor:pointer; padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+                     style="cursor:pointer; padding:15px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
                     <div>
-                        <strong>${set.subject}</strong>: ${set.topic}
-                        <div style="font-size:0.8em; color:#666;">
-                            ${set.card_count} Karten • ${new Date(set.date).toLocaleDateString()}
+                        <strong style="font-size: 1.1em; color: #333;">${set.subject}</strong> <span style="color: #667eea;">•</span> ${set.topic}
+                        <div style="font-size:0.85em; color:#888; margin-top: 5px;">
+                            🗂️ ${set.card_count} Karten | 📅 ${new Date(set.date).toLocaleDateString()}
                         </div>
                     </div>
-                    <span onclick="deleteCard(${set.id})">🗑️</span>
-                    <span>➡️</span>
+                    
+                    <div style="display: flex; gap: 20px; align-items: center;">
+                        <span style="font-size: 1.2rem; color: #667eea;">➡️</span>
+                    </div>
                 </div>
             `).join('');
         } else {
@@ -147,19 +149,5 @@ function prevCard() {
     if(currentIndex > 0) {
         currentIndex--;
         showCard(currentIndex);
-    }
-}
-
-async function deleteCard(id) {
-    if (!confirm("Möchtest du diese Karteikarte wirklich löschen?")) return;
-
-    try {
-        const res = await apiCall(`/api/cards/${id}`, 'DELETE');
-        if (res.success) {
-            showOutput("Note gelöscht.", "success-msg");
-            loadGrades();
-        }
-    } catch (e) {
-        showOutput("Fehler beim Löschen.", "error-msg");
     }
 }
